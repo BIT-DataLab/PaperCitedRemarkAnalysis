@@ -1,0 +1,14 @@
+
+*
+!*/
+!*.py
+!*.ipynb
+!*.md
+!*.json
+!*.csv
+!*.sql
+!.gitignore
+.DS_Store
+
+chrome_bin/
+.vscode/
