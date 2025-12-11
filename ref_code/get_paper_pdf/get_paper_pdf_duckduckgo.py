@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote_plus, urljoin, urlparse, parse_qs, unquote
 
-# 扩展1个google 搜索引擎。
 
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -161,13 +160,30 @@ def download_pdf(url: str, title: str, dest_dir: Path = Path("downloads")) -> Pa
 
 
 def extract_pdf_links_from_html(html: str, base_url: str):
-    hrefs = re.findall(r'href=["\']([^"\']+)["\']', html, flags=re.I)
+    # 同时收集 href/src（应对 embed/iframe/object 中的 PDF）
+    candidates = re.findall(r'(?:href|src)=["\']([^"\']+)["\']', html, flags=re.I)
+    # 常见 meta 中的 PDF 线索
+    candidates += re.findall(r'content=["\']([^"\']+\.pdf)["\']', html, flags=re.I)
+
     pdfs = []
-    for href in hrefs:
+    seen = set()
+    for href in candidates:
         full = urljoin(base_url, href)
-        if is_pdf_url(full):
+        if is_pdf_url(full) and full not in seen:
+            seen.add(full)
             pdfs.append(full)
     return pdfs
+
+
+def is_page_matching_query(html: str, query: str, min_hits: int = MIN_TITLE_HITS, min_overlap: float = MIN_TITLE_OVERLAP) -> bool:
+    # 粗暴去标签做文本匹配
+    text = re.sub(r"<[^>]+>", " ", html)
+    tokens = get_query_tokens(query)
+    if not tokens:
+        return False
+    hits = token_hits(text, tokens)
+    overlap = hits / len(tokens)
+    return hits >= min_hits and overlap >= min_overlap
 
 
 def get_query_tokens(query: str) -> list[str]:
@@ -228,7 +244,10 @@ def find_pdf_for_result(title: str, url: str, query: str):
 
     pdf_links = extract_pdf_links_from_html(resp.text, url)
     if not pdf_links:
-        print(f"页面未发现 PDF 链接: {url}")
+        if is_page_matching_query(resp.text, query):
+            print(f"页面疑似正文但未显式发现 PDF 链接: {url}")
+        else:
+            print(f"页面未发现 PDF 链接: {url}")
         return None
 
     # 选取与 query/title 最匹配的 PDF 链接
@@ -246,6 +265,44 @@ def find_pdf_for_result(title: str, url: str, query: str):
         print(f"PDF 链接与查询匹配度低（score={best_score}），跳过: {best}")
         return None
     return best
+
+
+def fetch_pdf_from_url(url: str, query: str):
+    """直接给定网页 URL，尝试找到并下载匹配的 PDF。"""
+    norm = normalize_url(url)
+    # 直接就是 PDF
+    if is_pdf_url(norm):
+        return download_pdf(norm, query)
+
+    try:
+        resp = requests.get(norm, headers=DEFAULT_HEADERS, timeout=20)
+        resp.raise_for_status()
+    except Exception as exc:
+        print(f"获取页面失败 {norm}: {exc}")
+        return None
+
+    pdf_links = extract_pdf_links_from_html(resp.text, norm)
+    if not pdf_links:
+        if is_page_matching_query(resp.text, query):
+            print(f"页面疑似正文但未找到 PDF 链接: {norm}")
+        else:
+            print(f"未找到 PDF 链接: {norm}")
+        return None
+
+    # 不强制标题匹配，直接用 query token 匹配度筛选
+    best = None
+    best_score = -1
+    for pdf_url in pdf_links:
+        score = score_match(pdf_url, query)
+        if score > best_score:
+            best = pdf_url
+            best_score = score
+    if best is None:
+        return None
+    if best_score < MIN_PDF_SCORE and not is_page_matching_query(resp.text, query):
+        print(f"PDF 链接与查询匹配度低（score={best_score}），跳过: {best}")
+        return None
+    return download_pdf(best, query)
 
 
 def process_search_results(query: str, results):
@@ -270,6 +327,8 @@ def process_search_results(query: str, results):
 # 示例查询
 #query = "DIFFODE: Neural ODE with Differentiable Hidden State for Irregular Time Series Analysis pdf"
 #query = "Towards Robust Trajectory Embedding for Similarity Computation: When Triangle Inequality Violations in Distance Metrics Matter pdf"
-query = "GraphMaster: Automated Graph Synthesis via LLM Agents in Data-Limited Environments pdf"
+query = "Rethink GraphODE Generalization within Coupled Dynamical System pdf"
 results = search_duckduckgo(query)
 process_search_results(query, results)
+
+#fetch_pdf_from_url("https://proceedings.mlr.press/v267/aamand25a.html", query)
