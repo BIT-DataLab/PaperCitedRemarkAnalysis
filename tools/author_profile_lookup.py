@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any, Dict, Optional
 
@@ -101,6 +102,8 @@ if __name__ == "__main__":
     print(f"OpenAlex author profile for {sample_openalex_id}")
     oa_profile = fetch_openalex_author_profile(sample_openalex_id)
     print(f"- {oa_profile.get('name')} | h-index={oa_profile.get('h_index')} | institution={oa_profile.get('institution')}")
+    print("\nFull OpenAlex author data:")
+    print(json.dumps(oa_profile, ensure_ascii=False, indent=2, sort_keys=True))
 
     api_key = os.environ.get("S2_API_KEY")
     if api_key:
@@ -108,5 +111,7 @@ if __name__ == "__main__":
         print(f"\nSemantic Scholar author profile for {sample_s2_id}")
         ss_profile = fetch_semanticscholar_author_h_index(sample_s2_id, api_key=api_key)
         print(f"- {ss_profile.get('name')} | h-index={ss_profile.get('h_index')} | affiliations={ss_profile.get('affiliations')}")
+        print("\nFull Semantic Scholar author data:")
+        print(json.dumps(ss_profile, ensure_ascii=False, indent=2, sort_keys=True))
     else:
         print("\nSkip Semantic Scholar demo (set S2_API_KEY to enable).")
