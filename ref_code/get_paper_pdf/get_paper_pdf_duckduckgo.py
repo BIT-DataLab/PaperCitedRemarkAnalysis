@@ -95,8 +95,28 @@ def search_duckduckgo(query, max_pages: int = MAX_PAGES):
         driver.quit()
 
 
+
+
 def is_pdf_url(url: str) -> bool:
     return url.lower().split("?")[0].endswith(".pdf")
+
+
+def is_openreview_url(url: str) -> bool:
+    return "openreview.net" in (urlparse(url).hostname or "")
+
+
+def is_pdf_like_url(url: str) -> bool:
+    """宽松判断：常见 PDF 端点（含 openreview /pdf?id=xxx 等）。"""
+    if is_pdf_url(url):
+        return True
+    parsed = urlparse(url)
+    path_q = (parsed.path or "") + ("?" + parsed.query if parsed.query else "")
+    path_l = path_q.lower()
+    if is_openreview_url(url) and parsed.path.startswith("/pdf"):
+        return True
+    # 常见的 query/path 里标注 pdf 的模式
+    pdf_hints = ["pdf?", "format=pdf", "type=pdf", "/download/pdf", "pdf-download", "pdf_file="]
+    return any(hint in path_l for hint in pdf_hints)
 
 
 def normalize_url(url: str) -> str:
@@ -169,7 +189,7 @@ def extract_pdf_links_from_html(html: str, base_url: str):
     seen = set()
     for href in candidates:
         full = urljoin(base_url, href)
-        if is_pdf_url(full) and full not in seen:
+        if is_pdf_like_url(full) and full not in seen:
             seen.add(full)
             pdfs.append(full)
     return pdfs
@@ -221,6 +241,26 @@ def title_is_relevant(result_title: str, query: str, min_hits: int = MIN_TITLE_H
 
 def find_pdf_for_result(title: str, url: str, query: str):
     url = normalize_url(url)
+    # openreview 论坛页直接转成 PDF 端点
+    if is_openreview_url(url):
+        parsed = urlparse(url)
+        qs = parse_qs(parsed.query)
+        if parsed.path.startswith("/forum") and "id" in qs:
+            try:
+                resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=20)
+                resp.raise_for_status()
+            except Exception as exc:
+                print(f"获取 OpenReview 页面失败 {url}: {exc}")
+                return None
+
+            if not is_page_matching_query(resp.text, query):
+                print(f"OpenReview 页面与查询不匹配，跳过: {url}")
+                return None
+
+            pdf_url = f"https://openreview.net/pdf?id={qs['id'][0]}"
+            print(f"OpenReview forum 转换为 PDF: {pdf_url}")
+            return pdf_url
+
     # 1) arXiv 入口保留，后续可替换为专用处理逻辑
     if is_arxiv_url(url):
         pdf = arxiv_to_pdf_url(url)
@@ -234,7 +274,7 @@ def find_pdf_for_result(title: str, url: str, query: str):
     if is_pdf_url(url):
         return url
 
-    # 3) 抓取页面，寻找 PDF 链接
+    # 3) 抓取页面，寻找 PDF 链接，并用页面文本做全局相关性门控
     try:
         resp = requests.get(url, headers=DEFAULT_HEADERS, timeout=20)
         resp.raise_for_status()
@@ -242,9 +282,11 @@ def find_pdf_for_result(title: str, url: str, query: str):
         print(f"获取页面失败 {url}: {exc}")
         return None
 
+    page_relevant = is_page_matching_query(resp.text, query)
+
     pdf_links = extract_pdf_links_from_html(resp.text, url)
     if not pdf_links:
-        if is_page_matching_query(resp.text, query):
+        if page_relevant:
             print(f"页面疑似正文但未显式发现 PDF 链接: {url}")
         else:
             print(f"页面未发现 PDF 链接: {url}")
@@ -262,14 +304,32 @@ def find_pdf_for_result(title: str, url: str, query: str):
             best_score = score
 
     if best_score < MIN_PDF_SCORE:  # 命中词过少则认为不相关
-        print(f"PDF 链接与查询匹配度低（score={best_score}），跳过: {best}")
-        return None
+        if not page_relevant:
+            print(f"PDF 链接与查询匹配度低（score={best_score}），且页面不相关，跳过: {best}")
+            return None
     return best
 
 
 def fetch_pdf_from_url(url: str, query: str):
     """直接给定网页 URL，尝试找到并下载匹配的 PDF。"""
     norm = normalize_url(url)
+    if is_openreview_url(norm):
+        parsed = urlparse(norm)
+        qs = parse_qs(parsed.query)
+        if parsed.path.startswith("/forum") and "id" in qs:
+            try:
+                resp = requests.get(norm, headers=DEFAULT_HEADERS, timeout=20)
+                resp.raise_for_status()
+            except Exception as exc:
+                print(f"获取 OpenReview 页面失败 {norm}: {exc}")
+                return None
+
+            if not is_page_matching_query(resp.text, query):
+                print(f"OpenReview 页面与查询不匹配，跳过: {norm}")
+                return None
+
+            pdf = f"https://openreview.net/pdf?id={qs['id'][0]}"
+            return download_pdf(pdf, query)
     # 直接就是 PDF
     if is_pdf_url(norm):
         return download_pdf(norm, query)
@@ -281,9 +341,11 @@ def fetch_pdf_from_url(url: str, query: str):
         print(f"获取页面失败 {norm}: {exc}")
         return None
 
+    page_relevant = is_page_matching_query(resp.text, query)
+
     pdf_links = extract_pdf_links_from_html(resp.text, norm)
     if not pdf_links:
-        if is_page_matching_query(resp.text, query):
+        if page_relevant:
             print(f"页面疑似正文但未找到 PDF 链接: {norm}")
         else:
             print(f"未找到 PDF 链接: {norm}")
@@ -299,8 +361,8 @@ def fetch_pdf_from_url(url: str, query: str):
             best_score = score
     if best is None:
         return None
-    if best_score < MIN_PDF_SCORE and not is_page_matching_query(resp.text, query):
-        print(f"PDF 链接与查询匹配度低（score={best_score}），跳过: {best}")
+    if best_score < MIN_PDF_SCORE and not page_relevant:
+        print(f"PDF 链接与查询匹配度低（score={best_score}），且页面不相关，跳过: {best}")
         return None
     return download_pdf(best, query)
 
@@ -324,11 +386,15 @@ def process_search_results(query: str, results):
     print("未找到可用的 PDF 链接。")
     return None
 
+
+def search_and_download(query: str, engine: str = "duckduckgo"):
+    results = search_duckduckgo(query)
+    return process_search_results(query, results)
+
 # 示例查询
 #query = "DIFFODE: Neural ODE with Differentiable Hidden State for Irregular Time Series Analysis pdf"
 #query = "Towards Robust Trajectory Embedding for Similarity Computation: When Triangle Inequality Violations in Distance Metrics Matter pdf"
 query = "Rethink GraphODE Generalization within Coupled Dynamical System pdf"
-results = search_duckduckgo(query)
-process_search_results(query, results)
+search_and_download(query, engine="duckduckgo")
 
-#fetch_pdf_from_url("https://proceedings.mlr.press/v267/aamand25a.html", query)
+#fetch_pdf_from_url("https://openreview.net/forum?id=5QMJZiHuGn", query)

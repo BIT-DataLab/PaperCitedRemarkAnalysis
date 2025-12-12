@@ -4,7 +4,7 @@
 Citation Analysis Demo using OpenAlex and Semantic Scholar APIs
 ================================================================
 
-python  /data2/jproject/PaperCitedRemarkAnalysis/ref_code/chatgpt_get_citation_meta.py   "Attention is All you Need"
+python   /data2/jproject/PaperCitedRemarkAnalysis/ref_code/get_citation_meta/get_paper_citation_meta.py   "state space model over directed graph"
 
 This Python script demonstrates how to retrieve citation information for a
 scholarly work given its title. It performs two parallel tasks using the
@@ -87,7 +87,7 @@ SEMANTIC_AUTHOR_URL = "https://api.semanticscholar.org/graph/v1/author/{author_i
 
 # Limit the number of citations to process to avoid excessive API calls during
 # demonstration.  Set to None to fetch all citations.
-MAX_CITATIONS: Optional[int] = 50
+MAX_CITATIONS: Optional[int] = 5
 
 
 def _http_get(url: str, params: Optional[Dict[str, str]] = None,

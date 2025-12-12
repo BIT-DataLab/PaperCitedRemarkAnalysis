@@ -245,9 +245,9 @@ def _pretty_print(result: Dict, source: str):
 
 
 if __name__ == "__main__":
-    sample_title = "Attention is All you Need"
+    sample_title = "Transformers over directed acyclic graphs"
     oa_result = get_openalex_citations(sample_title, max_results=5)
     _pretty_print(oa_result, "OpenAlex")
 
-    s2_result = get_semanticscholar_citations(sample_title, max_results=5)
-    _pretty_print(s2_result, "Semantic Scholar")
+    # s2_result = get_semanticscholar_citations(sample_title, max_results=5)
+    # _pretty_print(s2_result, "Semantic Scholar")
