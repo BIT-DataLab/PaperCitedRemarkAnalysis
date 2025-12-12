@@ -56,7 +56,7 @@ if __name__ == "__main__":
     print(f"- {oa_profile.get('name')} | h-index={oa_profile.get('h_index')} | institution={oa_profile.get('institution')}")
 
     api_key = os.environ.get("S2_API_KEY")
-    if 1:
+    if api_key:
         sample_s2_id = os.environ.get("S2_SAMPLE_AUTHOR_ID", "1741101")
         print(f"\nSemantic Scholar author profile for {sample_s2_id}")
         ss_profile = fetch_semanticscholar_author_h_index(sample_s2_id, api_key=api_key)

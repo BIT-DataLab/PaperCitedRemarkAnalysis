@@ -9,6 +9,7 @@ import requests
 
 OA_BASE = "https://api.openalex.org"
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
+OA_MAILTO = os.environ.get("OPENALEX_MAILTO", "1165324684@qq.com")
 
 
 def _http_get_json(url: str, *, params: Optional[Dict] = None, headers: Optional[Dict] = None) -> Dict:
@@ -18,10 +19,18 @@ def _http_get_json(url: str, *, params: Optional[Dict] = None, headers: Optional
     return resp.json()
 
 
+def _with_mailto(params: Optional[Dict]) -> Dict:
+    """Attach mailto for OpenAlex polite pool if configured."""
+    params = params.copy() if params else {}
+    if OA_MAILTO:
+        params.setdefault("mailto", OA_MAILTO)
+    return params
+
+
 # --------------------------- OpenAlex path --------------------------- #
 def _search_openalex_work(title: str) -> Optional[Dict]:
     params = {"filter": f"title.search:{title}", "per-page": 1}
-    data = _http_get_json(f"{OA_BASE}/works", params=params)
+    data = _http_get_json(f"{OA_BASE}/works", params=_with_mailto(params))
     results = data.get("results") or []
     return results[0] if results else None
 
@@ -30,7 +39,7 @@ def _get_openalex_author_h_index(author_id: str, cache: Dict[str, Optional[int]]
     if author_id in cache:
         return cache[author_id]
     try:
-        author = _http_get_json(f"{OA_BASE}/authors/{author_id}")
+        author = _http_get_json(f"{OA_BASE}/authors/{author_id}", params=_with_mailto(None))
         cache[author_id] = author.get("h_index") or author.get("summary_stats", {}).get("h_index")
     except Exception:
         cache[author_id] = None
@@ -55,7 +64,7 @@ def fetch_openalex_cited_by(
         "select": "id,display_name,authorships,publication_year,doi,cited_by_count",
         "sort": "cited_by_count:desc",
     }
-    data = _http_get_json(f"{OA_BASE}/works", params=params)
+    data = _http_get_json(f"{OA_BASE}/works", params=_with_mailto(params))
 
     author_cache: Dict[str, Optional[int]] = {}
     lookups_left = max_author_lookups
@@ -224,7 +233,7 @@ if __name__ == "__main__":
         print(f"  [{idx}] {item.get('title')} | doi={item.get('doi')} | authors={len(item.get('authors', []))}")
 
     api_key = os.environ.get("S2_API_KEY")
-    if 1:
+    if api_key:
         print("\nSemantic Scholar citing papers (requires S2_API_KEY):")
         s2_result = fetch_semanticscholar_cited_by(sample_title, api_key=api_key, max_results=3)
         s2_match = s2_result.get("match") or {}
