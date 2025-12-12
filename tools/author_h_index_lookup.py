@@ -9,6 +9,7 @@ import requests
 
 OA_BASE = "https://api.openalex.org"
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
+OA_MAILTO = os.environ.get("OPENALEX_MAILTO", "1165324684@qq.com")
 
 
 def _http_get_json(url: str, *, params: Optional[Dict] = None, headers: Optional[Dict] = None) -> Dict:
@@ -18,9 +19,17 @@ def _http_get_json(url: str, *, params: Optional[Dict] = None, headers: Optional
     return resp.json()
 
 
+def _with_mailto(params: Optional[Dict]) -> Dict:
+    """Attach mailto for OpenAlex polite pool if configured."""
+    params = params.copy() if params else {}
+    if OA_MAILTO:
+        params.setdefault("mailto", OA_MAILTO)
+    return params
+
+
 def fetch_openalex_author_h_index(author_id: str) -> Dict[str, Optional[str]]:
     """Return display name, h-index and institution for an OpenAlex author id."""
-    data = _http_get_json(f"{OA_BASE}/authors/{author_id}")
+    data = _http_get_json(f"{OA_BASE}/authors/{author_id}", params=_with_mailto(None))
     summary_stats = data.get("summary_stats") or {}
     last_institution = data.get("last_known_institution") or {}
     return {
