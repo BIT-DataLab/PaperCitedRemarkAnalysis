@@ -62,7 +62,7 @@ def fetch_openalex_cited_by(
         "filter": f"cites:{work_id}",
         "per-page": max_results,
         "select": "id,display_name,authorships,publication_year,doi,cited_by_count",
-        "sort": "cited_by_count:desc",
+        "sort": "cited_by_count:desc,publication_year:desc",
     }
     data = _http_get_json(f"{OA_BASE}/works", params=_with_mailto(params))
 
