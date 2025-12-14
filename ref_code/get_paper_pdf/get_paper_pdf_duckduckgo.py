@@ -394,7 +394,14 @@ def search_and_download(query: str, engine: str = "duckduckgo"):
 # 示例查询
 #query = "DIFFODE: Neural ODE with Differentiable Hidden State for Irregular Time Series Analysis pdf"
 #query = "Towards Robust Trajectory Embedding for Similarity Computation: When Triangle Inequality Violations in Distance Metrics Matter pdf"
-query = "Rethink GraphODE Generalization within Coupled Dynamical System pdf"
-search_and_download(query, engine="duckduckgo")
+# query = "Rethink GraphODE Generalization within Coupled Dynamical System pdf"
+# search_and_download(query, engine="duckduckgo")
 
-#fetch_pdf_from_url("https://openreview.net/forum?id=5QMJZiHuGn", query)
+# OPENREVIEW_URL = "https://openreview.net/forum?id=5QMJZiHuGn"
+# query = "Improved Approximations for Hard Graph Problems using Predictions"
+# # query = "paper" # 这种和待下载的论文title不匹配，无法下载
+# fetch_pdf_from_url(OPENREVIEW_URL, query)
+
+PMLR_URL = "https://proceedings.mlr.press/v235/huang24x.html"
+query = "Position: TrustLLM: Trustworthiness in Large Language Models"
+fetch_pdf_from_url(PMLR_URL, query)
