@@ -1,0 +1,2 @@
+"""Domain utilities (pure functions)."""
+
