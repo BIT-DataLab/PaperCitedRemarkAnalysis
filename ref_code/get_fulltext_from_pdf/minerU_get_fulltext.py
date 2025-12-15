@@ -73,16 +73,16 @@ def parse_pdf_with_mineru(pdf_path: str, pdf_file_name: str,
 
 # 示例用法：
 if __name__ == "__main__":
-    base_dir = "/data/QUEST/jzshe/project/quest/data_link/docs/pdf-doc"
-    pdf_file = "5-Wu et al. - 2022 - HQANN Efficient and Robust Similarity Search for .pdf"
+    base_dir = "/data2/jproject/PaperCitedRemarkAnalysis/downloads"
+    pdf_file = "HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf"
 
     result_json = parse_pdf_with_mineru(base_dir, pdf_file)
     keys  = result_json.keys()
     print(keys)
-    with open("downloads/mineru_output.json", "w", encoding="utf-8") as f:
-        json.dump(result_json, f, ensure_ascii=False, indent=2)
+    # with open("downloads/mineru_output.json", "w", encoding="utf-8") as f:
+    #     json.dump(result_json, f, ensure_ascii=False, indent=2)
 
-    with open("downloads/mineru_output.md", "w", encoding="utf-8") as f:
+    with open("downloads/HippoRAG_mienrU.md", "w", encoding="utf-8") as f:
         f.write(result_json['md_content'])
     # data = json.loads(result_json['content_list'])
     # for item in data:
