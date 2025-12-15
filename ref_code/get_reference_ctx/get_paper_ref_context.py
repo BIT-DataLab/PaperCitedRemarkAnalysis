@@ -1,14 +1,16 @@
 """Extract in-text citation contexts for a referenced paper from PyMuPDF Markdown.
 
 测试方法：
-python ref_code/get_reference_ctx/get_paper_ref_context.py --json
+python3 ref_code/get_reference_ctx/get_paper_ref_context.py --json
 默认检测的被引用论文title: 
 Learning to retrieve reasoning paths over wikipedia graph for question answering
 
 This script is designed for Markdown converted from academic PDFs (e.g. via PyMuPDF4LLM),
 where the reference list starts after a standalone line:
-  - **References**
-  - References
+  - References / Bibliography
+  - **References** / **Bibliography**
+  - ## References / ## Bibliography
+  - ## **References** / ## **Bibliography**
 
 The reference list contains entries that start with "[id]" (numeric). Given a target
 paper title, we:
@@ -33,7 +35,10 @@ DEFAULT_MD_PATH = Path(
     "HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....md"
 )
 
-_REFERENCES_HEADING_RE = re.compile(r"^\s*(?:\*\*References\*\*|References)\s*$", re.MULTILINE)
+_REFERENCES_HEADING_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?(?:\*\*\s*(?:References|Bibliography)\s*\*\*|(?:References|Bibliography))\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
 _REF_ENTRY_START_RE = re.compile(r"^\s*\[(\d+)\]\s+", re.MULTILINE)
 
 # Numeric citation brackets in the main text, e.g.:
@@ -81,10 +86,13 @@ def _line_col(text: str, idx: int) -> Tuple[int, int]:
 
 
 def split_body_and_references(md_text: str) -> Tuple[str, str]:
-    """Split Markdown into (body_text, references_text) by the last References heading."""
+    """Split Markdown into (body_text, references_text) by the last References/Bibliography heading."""
     matches = list(_REFERENCES_HEADING_RE.finditer(md_text))
     if not matches:
-        raise ValueError('References heading not found (expected line: "References" or "**References**").')
+        raise ValueError(
+            'References/Bibliography heading not found (expected a standalone line like '
+            '"References", "**References**", "## References", "## **References**", "Bibliography", ...).'
+        )
     m = matches[-1]
     body = md_text[: m.start()]
     references = md_text[m.end() :]
@@ -308,4 +316,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
