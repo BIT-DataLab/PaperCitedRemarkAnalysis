@@ -13,7 +13,9 @@ PdfPath = Union[str, Path]
 
 def _normalize_method(method: str) -> str:
     m = (method or "").strip().lower()
-    if m in {"pymupdfllm", "pymupdf4llm", "pymupdf"}:
+    if m in {"pymupdf", "pymupdf_text"}:
+        return "pymupdf"
+    if m in {"pymupdfllm", "pymupdf4llm"}:
         return "pymupdfllm"
     if m in {"mineru", "miner_u", "miner"}:
         return "mineru"
@@ -53,30 +55,46 @@ def get_pdf_fulltext(
     method = _normalize_method(method)
     started = time.time()
 
-    from .truncate import open_maybe_truncated_pdf
+    if method == "pymupdf":
+        from .backends.pymupdf_backend import extract_markdown as _extract_pymupdf
 
-    with open_maybe_truncated_pdf(pdf_path, enabled=truncate_long_pdf, max_pages=max_pages) as (parse_path, meta):
-        if method == "pymupdfllm":
-            from .backends.pymupdfllm_backend import extract_markdown as _extract_pymupdfllm
+        text, extract_meta = _extract_pymupdf(
+            pdf_path,
+            truncate_long_pdf=truncate_long_pdf,
+            max_pages=max_pages,
+        )
+        meta: Dict[str, object] = {
+            "page_count": extract_meta.get("page_count"),
+            "pages_used": extract_meta.get("pages_used"),
+            "truncated": extract_meta.get("truncated"),
+            "parsed_pdf": str(pdf_path),
+        }
+        backend_meta = {}
+    else:
+        from .truncate import open_maybe_truncated_pdf
 
-            text = _extract_pymupdfllm(
-                parse_path,
-                write_images=pymupdfllm_write_images,
-                image_dir=(Path(pymupdfllm_image_dir).expanduser() if pymupdfllm_image_dir else None),
-            )
-            backend_meta: Dict[str, Any] = {}
-        elif method == "mineru":
-            from .backends.mineru_backend import extract_markdown as _extract_mineru
+        with open_maybe_truncated_pdf(pdf_path, enabled=truncate_long_pdf, max_pages=max_pages) as (parse_path, meta):
+            if method == "pymupdfllm":
+                from .backends.pymupdfllm_backend import extract_markdown as _extract_pymupdfllm
 
-            text, backend_meta = _extract_mineru(
-                parse_path,
-                url=mineru_url,
-                lang_list=mineru_lang_list,
-                backend=mineru_backend,
-                timeout_s=mineru_timeout_s,
-            )
-        else:
-            raise ValueError(f"Unsupported method: {method!r}")
+                text = _extract_pymupdfllm(
+                    parse_path,
+                    write_images=pymupdfllm_write_images,
+                    image_dir=(Path(pymupdfllm_image_dir).expanduser() if pymupdfllm_image_dir else None),
+                )
+                backend_meta = {}
+            elif method == "mineru":
+                from .backends.mineru_backend import extract_markdown as _extract_mineru
+
+                text, backend_meta = _extract_mineru(
+                    parse_path,
+                    url=mineru_url,
+                    lang_list=mineru_lang_list,
+                    backend=mineru_backend,
+                    timeout_s=mineru_timeout_s,
+                )
+            else:
+                raise ValueError(f"Unsupported method: {method!r}")
 
     elapsed_s = time.time() - started
     return {
@@ -91,4 +109,3 @@ def get_pdf_fulltext(
         "elapsed_s": elapsed_s,
         "backend_meta": backend_meta,
     }
-

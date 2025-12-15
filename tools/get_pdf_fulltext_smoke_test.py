@@ -3,6 +3,11 @@
 Example:
 /data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_pdf_fulltext_smoke_test.py \
     downloads/HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf \
+    --method pymupdf --max-pages 20 --out downloads/HippoRAG_fulltext.md
+
+或者（pymupdf4llm 输出 Markdown）
+/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_pdf_fulltext_smoke_test.py \
+    downloads/HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf \
     --method pymupdfllm --max-pages 20 --out downloads/HippoRAG_fulltext.md
 
 或者
@@ -29,7 +34,11 @@ from pcra.get_pdf_fulltext import get_pdf_fulltext
 def main() -> None:
     parser = argparse.ArgumentParser(description="Smoke test for pcra.get_pdf_fulltext (Module 4).")
     parser.add_argument("pdf", help="Local PDF path.")
-    parser.add_argument("--method", default="pymupdfllm", help="Extraction method (default: pymupdfllm).")
+    parser.add_argument(
+        "--method",
+        default="pymupdfllm",
+        help="Extraction method (default: pymupdfllm). Supported: pymupdf | pymupdfllm | mineru.",
+    )
     parser.add_argument(
         "--max-pages",
         type=int,
@@ -46,7 +55,7 @@ def main() -> None:
         default="http://localhost:18543/file_parse",
         help="MinerU service URL (only for method=mineru).",
     )
-    parser.add_argument("--out", default=None, help="Optional: write extracted Markdown to this path.")
+    parser.add_argument("--out", default=None, help="Optional: write extracted text/Markdown to this path.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -78,4 +87,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -6,7 +6,7 @@ from typing import Final, Tuple
 
 # Public API knobs
 DEFAULT_METHOD: Final[str] = "pymupdfllm"
-SUPPORTED_METHODS: Final[Tuple[str, ...]] = ("pymupdfllm", "mineru")
+SUPPORTED_METHODS: Final[Tuple[str, ...]] = ("pymupdf", "pymupdfllm", "mineru")
 
 # Long-PDF truncation (to avoid slow appendix parsing)
 DEFAULT_TRUNCATE_LONG_PDF: Final[bool] = True
@@ -20,4 +20,3 @@ DEFAULT_MINERU_URL: Final[str] = "http://localhost:18543/file_parse"
 DEFAULT_MINERU_BACKEND: Final[str] = "pipeline"
 DEFAULT_MINERU_LANG_LIST: Final[Tuple[str, ...]] = ("ch",)
 DEFAULT_MINERU_TIMEOUT_S: Final[int] = 600
-

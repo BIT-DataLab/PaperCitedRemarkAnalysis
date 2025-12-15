@@ -11,7 +11,8 @@
   - `max_pages: int = 20`
 
 当 `truncate_long_pdf=True` 且 `page_count > max_pages` 时，会先生成一个仅包含前 `max_pages` 页的临时 PDF，再交给后端解析。
+对 `method=pymupdf` 则不会生成临时 PDF，而是直接读取前 `max_pages` 页的文本。
 
 ## Smoke Test
 
-`python3 tools/get_pdf_fulltext_smoke_test.py <pdf_path> --method pymupdfllm --max-pages 20 --out <out.md>`
+`python3 tools/get_pdf_fulltext_smoke_test.py <pdf_path> --method pymupdf --max-pages 20 --out <out.md>`
