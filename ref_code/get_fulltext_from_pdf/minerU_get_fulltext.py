@@ -10,7 +10,7 @@ def parse_pdf_with_mineru(pdf_path: str, pdf_file_name: str,
                           url: str = "http://localhost:18543/file_parse",
                           lang_list=None, backend="pipeline", return_md=True,  return_images=False, return_content_list=False) -> dict:
     """
-    调用本地 MinerU 服务解析 PDF 文件，并返回 res_content JSON。
+    调用本地 MinerU 服务解析 PDF 文件，并返回 res_content JSON。 默认只返回md
 
     Args:
         pdf_path (str): PDF 文件所在目录路径。
@@ -79,8 +79,8 @@ if __name__ == "__main__":
     result_json = parse_pdf_with_mineru(base_dir, pdf_file)
     keys  = result_json.keys()
     print(keys)
-    # with open("downloads/mineru_output.json", "w", encoding="utf-8") as f:
-    #     json.dump(result_json, f, ensure_ascii=False, indent=2)
+    # result_json['md_content'] 这个就是字符串形式的论文markdown全文
+
 
     with open("downloads/HippoRAG_mienrU.md", "w", encoding="utf-8") as f:
         f.write(result_json['md_content'])
