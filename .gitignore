@@ -10,6 +10,7 @@
 !.gitignore
 .DS_Store
 
+log/
 downloads/
 chrome_bin/
 .vscode/
