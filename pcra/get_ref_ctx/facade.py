@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any, Dict
 
 from . import config
@@ -11,6 +12,10 @@ from .match import find_reference_entry_by_title
 from .references import parse_reference_entries, split_body_and_references
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_reference_entry_for_output(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip()
 
 
 def get_paper_reference_context(
@@ -55,7 +60,7 @@ def get_paper_reference_context(
         {
             "ref_id": match.entry.ref_id,
             "match_score": match.score,
-            "reference_entry": match.entry.raw_text,
+            "reference_entry": _clean_reference_entry_for_output(match.entry.raw_text),
             "contexts": [
                 {
                     "ref_id": c.ref_id,
@@ -71,4 +76,3 @@ def get_paper_reference_context(
         }
     )
     return base
-
