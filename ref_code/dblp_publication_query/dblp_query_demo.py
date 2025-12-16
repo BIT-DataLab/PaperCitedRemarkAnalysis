@@ -9,6 +9,8 @@ DBLP 论文发表情况查询 Demo
   2) 查询任意标题：
        python3 ref_code/call_llm/dblp_query_demo.py --title "Paper Title"
 
+       python3 ref_code/call_llm/dblp_query_demo.py  --title "QUEST: Query Optimization in Unstructured Document Analysis"
+
   3) 调整返回条数/匹配阈值：
        python3 ref_code/call_llm/dblp_query_demo.py --hits 20 --min-sim 0.92
 
