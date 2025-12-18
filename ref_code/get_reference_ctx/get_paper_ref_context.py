@@ -32,7 +32,7 @@ from typing import Iterable, List, Optional, Tuple
 
 DEFAULT_MD_PATH = Path(
     "/data2/jproject/PaperCitedRemarkAnalysis/downloads/"
-    "HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....md"
+    "HippoRAG_fulltext.md"
 )
 
 _REFERENCES_HEADING_RE = re.compile(
