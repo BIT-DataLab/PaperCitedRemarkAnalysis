@@ -1,7 +1,7 @@
 """Smoke test: download a paper PDF via DuckDuckGo + Selenium.
 
 Example:
-  /data/QUEST/jzshe/miniconda3/envs/tracer/bin/python tools/get_pdf_smoke_test.py \
+  /data/QUEST/jzshe/miniconda3/envs/tracer/bin/python smoke_test/get_pdf_smoke_test.py \
     "Rethink GraphODE Generalization within Coupled Dynamical System pdf"
 """
 

@@ -13,5 +13,5 @@ Module 3: fetch a paper PDF via a free search engine (DuckDuckGo) and download i
 
 - Library API: `pcra.get_pdf.search_and_download(query)`
 - CLI smoke test:
-  - `python tools/get_pdf_smoke_test.py "Paper Title pdf"`
+  - `python smoke_test/get_pdf_smoke_test.py "Paper Title pdf"`
 

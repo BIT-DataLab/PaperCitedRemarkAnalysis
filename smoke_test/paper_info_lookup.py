@@ -5,7 +5,7 @@ It composes two top-level APIs:
   1) title -> paper_id (+ optional metadata)
   2) paper_id -> work metadata
 
-python tools/paper_info_lookup.py  "Transformers over Directed Acyclic Graphs"
+python smoke_test/paper_info_lookup.py  "Transformers over Directed Acyclic Graphs"
 """
 
 from __future__ import annotations

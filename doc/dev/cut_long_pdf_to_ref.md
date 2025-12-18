@@ -15,4 +15,4 @@
 
 ## Smoke Test
 
-`python3 tools/get_pdf_fulltext_smoke_test.py <pdf_path> --method pymupdf --max-pages 20 --out <out.md>`
+`python3 smoke_test/get_pdf_fulltext_smoke_test.py <pdf_path> --method pymupdf --max-pages 20 --out <out.md>`

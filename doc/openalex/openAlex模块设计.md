@@ -206,9 +206,9 @@ cursor paging 逻辑应集中在 `client.py`，由调用方（pipeline/facade）
 
 ---
 
-## 7. 重构落地计划（从 tools/ 迁移到 pcra/）
+## 7. 重构落地计划（从 smoke_test/ 迁移到 pcra/）
 
 1. 新增 `pcra/openalex/*` 与 `pcra/domain/scoring.py`，先保证 6 个顶层接口可用（OpenAlex only）。
-2. 将 `tools/paper_info_lookup.py`、`tools/author_profile_lookup.py`、`tools/cited_by_lookup.py` 改造为“薄 CLI”，内部只调用 `OpenAlexFacade`。
+2. 将 `smoke_test/paper_info_lookup.py`、`smoke_test/author_profile_lookup.py`、`smoke_test/cited_by_lookup.py` 改造为“薄 CLI”，内部只调用 `OpenAlexFacade`。
 3. 将模块2的 h-index enrich/filter 提取到 `pcra/pipelines/citations.py`（可选，但推荐用于彻底解耦）。
-4. 删除/移除 tools 中 Semantic Scholar 路径代码，避免耦合与维护成本。
+4. 删除/移除 smoke_test 中 Semantic Scholar 路径代码，避免耦合与维护成本。

@@ -1,17 +1,17 @@
 """Smoke test: extract fulltext from a local PDF.
 
 Example:
-/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_pdf_fulltext_smoke_test.py \
+/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python smoke_test/get_pdf_fulltext_smoke_test.py \
     downloads/HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf \
     --method pymupdf --max-pages 20 --out downloads/HippoRAG_fulltext.md
 
 或者（pymupdf4llm 输出 Markdown）
-/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_pdf_fulltext_smoke_test.py \
+/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python smoke_test/get_pdf_fulltext_smoke_test.py \
     downloads/HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf \
     --method pymupdfllm --max-pages 20 --out downloads/HippoRAG_fulltext.md
 
 或者
-/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_pdf_fulltext_smoke_test.py \
+/data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python smoke_test/get_pdf_fulltext_smoke_test.py \
     downloads/HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf \
      --method mineru --mineru-url http://localhost:18543/file_parse --max-pages 20 --out downloads/HippoRAG_fulltext.md
 

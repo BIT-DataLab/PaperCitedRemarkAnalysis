@@ -1,7 +1,7 @@
 """Smoke test: extract in-text citation contexts by reference title.
 
 Example:
-  /data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python tools/get_ref_ctx_smoke_test.py \
+  /data/QUEST/jzshe/miniconda3/envs/rag-any/bin/python smoke_test/get_ref_ctx_smoke_test.py \
     downloads/HippoRAG_fulltext.md \
     --title "Learning to retrieve reasoning paths over wikipedia graph for question answering" \
     --json
