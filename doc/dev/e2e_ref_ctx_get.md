@@ -13,6 +13,47 @@
 
 请你分析一下系统当前 @pcra/ 中的模块架构 ， 说明为了实现上述流程，有哪些功能有缺失，然后给出一个模块功能升级计划供我审阅。
 
+---
+
+# Phase 1（已实现）：端到端组装与落盘
+
+## 实现位置
+
+- 业务编排函数：`pcra/pipelines/e2e_ref_ctx_get.py::run_e2e_ref_ctx_get`
+- 手动 smoke test 脚本：`smoke_test/e2e_ref_ctx_get_smoke_test.py`
+
+## 使用方法（手动跑 E2E）
+
+```bash
+python3 smoke_test/e2e_ref_ctx_get_smoke_test.py \
+  "{paper_to_analy}" \
+  --topk-citation-cand {topk_citation_cand} \
+  --topk-author-max-h-index-cand {topk_author_max_h_index_cand} \
+  --out-dir log/e2e_ref_ctx_get_run
+```
+
+常用可选参数：
+- `--fulltext-method pymupdfllm|pymupdf|mineru`
+- `--max-pages 20` / `--no-truncate`
+- `--threshold 0.8`（References 匹配阈值）
+- `--window 512`（上下文截取窗口）
+
+## 输出（满足 Phase 1 的两个 JSON 产物）
+
+1) 候选集合指标（max(h_index) + cited_by_count）：
+- `log/e2e_ref_ctx_get_run/cand_h_index_cited_by.json`
+
+2) 每篇 citing paper 一份引用上下文 JSON：
+- `log/e2e_ref_ctx_get_run/paper_ref_contexts/{paper_id}.json`
+
+同时为了便于排查，会把每篇候选的抽取全文写到：
+- `log/e2e_ref_ctx_get_run/fulltext/{paper_id}.md`
+
+## 已知限制（当前模块能力边界）
+
+- `pcra/get_ref_ctx` 当前只支持英文 `References/Bibliography` 标题行 + 数字引用格式 `[n]`（不支持 author-year）。
+- PDF 获取依赖 DuckDuckGo+Selenium，命中率受网页结构影响；失败会在 `{paper_id}.json` 里记录 `pdf.error/fulltext.error`，但不会中断整个流程。
+
 
 # 模块功能升级计划（已审阅）
 

@@ -21,7 +21,12 @@ REFERENCES_HEADING_RE: Final[re.Pattern[str]] = re.compile(
 
 # Parse numbered reference entry starts in the References section, e.g.:
 #   [4] Some author... Title...
-REF_ENTRY_START_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[(\d+)\]\s+", re.MULTILINE)
+#   - [4] Some author... Title...     (common in pymupdf4llm Markdown)
+#   * [4] Some author... Title...
+REF_ENTRY_START_RE: Final[re.Pattern[str]] = re.compile(
+    r"^\s*(?:[-*\u2022]\s+)?\[(\d+)\]\s+",
+    re.MULTILINE,
+)
 
 # Numeric citation brackets in the main text (only):
 #   [4]

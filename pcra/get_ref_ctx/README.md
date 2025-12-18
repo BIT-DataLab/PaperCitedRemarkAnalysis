@@ -8,7 +8,7 @@ Given extracted paper text (Markdown from `pymupdf4llm` or plain text from PyMuP
 paper title:
 
 1. Locate the last `References` / `Bibliography` heading line.
-2. Parse numbered reference entries that start with `[id]`.
+2. Parse numbered reference entries that start with `[id]` (or Markdown bullets like `- [id]` / `* [id]`).
 3. Match the target title to a reference entry to get its numeric `ref_id`.
 4. Search the body for citation brackets like `[id]`, `[id1, id2, ...]`, `[id1-id2]` / `[id1–id2]`.
 5. Extract +/- `window` characters as contexts for each in-text match.

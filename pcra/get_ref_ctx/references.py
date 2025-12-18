@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from typing import List, Tuple
 
 from . import config
 from .models import ReferenceEntry
+
+_INLINE_REF_ENTRY_START_RE = re.compile(r"\.\s+\[(\d+)\]\s+")
 
 
 def split_body_and_references(md_text: str) -> Tuple[str, str]:
@@ -31,16 +34,28 @@ def split_body_and_references(md_text: str) -> Tuple[str, str]:
 def parse_reference_entries(references_text: str) -> List[ReferenceEntry]:
     """Parse numbered reference entries from the References section text."""
 
-    starts = list(config.REF_ENTRY_START_RE.finditer(references_text))
-    if not starts:
+    start_markers: List[Tuple[int, int]] = []
+    for m in config.REF_ENTRY_START_RE.finditer(references_text):
+        start_markers.append((m.start(), int(m.group(1))))
+    for m in _INLINE_REF_ENTRY_START_RE.finditer(references_text):
+        # group(1) captures digits; the `[` is right before it.
+        start_markers.append((m.start(1) - 1, int(m.group(1))))
+
+    if not start_markers:
         return []
 
+    start_markers.sort(key=lambda x: x[0])
+    dedup: List[Tuple[int, int]] = []
+    seen_pos = set()
+    for pos, rid in start_markers:
+        if pos in seen_pos:
+            continue
+        seen_pos.add(pos)
+        dedup.append((pos, rid))
+
     entries: List[ReferenceEntry] = []
-    for i, m in enumerate(starts):
-        ref_id = int(m.group(1))
-        start = m.start()
-        end = starts[i + 1].start() if i + 1 < len(starts) else len(references_text)
+    for i, (start, ref_id) in enumerate(dedup):
+        end = dedup[i + 1][0] if i + 1 < len(dedup) else len(references_text)
         raw = references_text[start:end].strip()
         entries.append(ReferenceEntry(ref_id=ref_id, raw_text=raw))
     return entries
-
