@@ -27,5 +27,6 @@ REF_ENTRY_START_RE: Final[re.Pattern[str]] = re.compile(r"^\s*\[(\d+)\]\s+", re.
 #   [4]
 #   [36, 42, 66, 87]
 #   [36; 42; 66]
-CITATION_BRACKET_RE: Final[re.Pattern[str]] = re.compile(r"\[\s*(\d+(?:\s*[,;]\s*\d+)*)\s*\]")
-
+#   [12-15]
+#   [12–15, 18]
+CITATION_BRACKET_RE: Final[re.Pattern[str]] = re.compile(r"\[\s*(\d(?:[\d\s,;–−-]*\d)?)\s*\]")

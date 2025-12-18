@@ -10,7 +10,7 @@ paper title:
 1. Locate the last `References` / `Bibliography` heading line.
 2. Parse numbered reference entries that start with `[id]`.
 3. Match the target title to a reference entry to get its numeric `ref_id`.
-4. Search the body for citation brackets like `[id]` or `[id1, id2, ...]`.
+4. Search the body for citation brackets like `[id]`, `[id1, id2, ...]`, `[id1-id2]` / `[id1–id2]`.
 5. Extract +/- `window` characters as contexts for each in-text match.
 
 ## API
@@ -23,4 +23,3 @@ result = get_paper_reference_context(md_text, "Attention Is All You Need", windo
 
 If the References heading cannot be found, the facade returns an empty result with an `error` field
 and logs a warning.
-

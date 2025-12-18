@@ -16,13 +16,26 @@ def _line_col(text: str, idx: int) -> Tuple[int, int]:
     return line, col
 
 
-def _parse_citation_ids(inner: str) -> List[int]:
-    ids: List[int] = []
+_RANGE_RE = re.compile(r"^(\d+)\s*[–−-]\s*(\d+)$")
+
+
+def _citation_inner_includes_id(inner: str, target_id: int) -> bool:
     for part in re.split(r"[;,]", inner):
         part = part.strip()
-        if part.isdigit():
-            ids.append(int(part))
-    return ids
+        if not part:
+            continue
+
+        m = _RANGE_RE.match(part)
+        if m:
+            lo = int(m.group(1))
+            hi = int(m.group(2))
+            if lo <= target_id <= hi or hi <= target_id <= lo:
+                return True
+            continue
+
+        if part.isdigit() and int(part) == target_id:
+            return True
+    return False
 
 
 def extract_citation_contexts(
@@ -36,7 +49,7 @@ def extract_citation_contexts(
     contexts: List[CitationContext] = []
     for m in config.CITATION_BRACKET_RE.finditer(body_text):
         inner = m.group(1)
-        if ref_id not in _parse_citation_ids(inner):
+        if not _citation_inner_includes_id(inner, ref_id):
             continue
 
         start, end = m.span()
@@ -56,4 +69,3 @@ def extract_citation_contexts(
             )
         )
     return contexts
-
