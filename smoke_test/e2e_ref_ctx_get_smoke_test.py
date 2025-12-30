@@ -2,10 +2,10 @@
 
 Example:
   python3 smoke_test/e2e_ref_ctx_get_smoke_test.py \
-    "Transformers over Directed Acyclic Graphs" \
-    --topk-citation-cand 15 \
-    --topk-author-max-h-index-cand 5 \
-    --out-dir log/e2e_ref_ctx_get_run \
+    "Human-in-the-loop Outlier Detection" \
+    --topk-citation-cand 30 \
+    --topk-author-max-h-index-cand 10 \
+    --out-dir log/chai_ref_ctx_get_run \
     --no-reuse
 """
 
@@ -66,7 +66,7 @@ def main() -> None:
         "--fulltext-method",
         default="pymupdfllm",
         help="Fulltext extraction method (default: pymupdfllm).",
-    )
+    ) # pymupdf / pymupdfllm / mineru
     parser.add_argument("--max-pages", type=int, default=20, help="Max pages used when truncating long PDFs.")
     parser.add_argument("--no-truncate", action="store_true", help="Disable long-PDF truncation.")
     parser.add_argument("--window", type=int, default=512, help="Citation context window size (chars).")
