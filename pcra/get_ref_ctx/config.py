@@ -13,9 +13,9 @@ DEFAULT_MATCH_THRESHOLD: Final[float] = 0.8
 #   **References**
 #   ## References
 #   ## **References**
-# Also supports "Bibliography" equivalents (English only).
+# Also supports "Bibliography" equivalents and a few common variants.
 REFERENCES_HEADING_RE: Final[re.Pattern[str]] = re.compile(
-    r"^\s*(?:#{1,6}\s*)?(?:\*\*\s*(?:References|Bibliography)\s*\*\*|(?:References|Bibliography))\s*$",
+    r"^\s*(?:#{1,6}\s*)?(?:\*\*\s*(?:References(?:\s+(?:and|&)\s+Notes)?|Bibliography)\s*\*\*|(?:References(?:\s+(?:and|&)\s+Notes)?|Bibliography))\s*$",
     re.MULTILINE | re.IGNORECASE,
 )
 
