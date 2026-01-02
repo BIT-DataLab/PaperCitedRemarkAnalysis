@@ -4,7 +4,7 @@
 !*.py
 !*.ipynb
 !*.md
-!*.json
+
 !*.csv
 !*.sql
 !.gitignore

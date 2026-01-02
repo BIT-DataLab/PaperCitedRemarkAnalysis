@@ -1,7 +1,10 @@
-下面是你要的 **「P0 极限提速 · Cursor 快速执行版 Prompt（≈1/3 长度）」**。
-这是一份**可以直接复制给 Cursor 执行**的版本，删除了解释性内容，只保留**必须改的点 + 验收标准**。
 
----
+请你根据下面的计划，参照现有的 @ref_code/author_title_query/llm_web_search_title_demo.py，
+写一个新的 @ref_code/author_title_query/fast_llm_web_search_title_demo.py
+
+ python ref_code/author_title_query/
+     fast_llm_web_search_title_demo.py --name "Guoliang Li" --affiliation "Tsinghua
+     University"
 
 # ⚡ P0 极限提速（Cursor 快速执行版）
 
