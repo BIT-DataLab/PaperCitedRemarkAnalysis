@@ -274,10 +274,11 @@
 | 【假设】参数脱敏（如 api_key）不会影响排障 | 人工评审 trace 中的参数字段，确认仍能定位配置问题 | 在 trace 中对敏感字段做 hash，并保留来源（env/YAML） |
 
 
-8. todo调整
+## 8. todo调整
 
 我认为你计划文档中对整体Stage的划分非常到位，但是在实际实现过程中，我遇到了新的需求，即在 `T4	【假设】作者指标补全 + 候选筛选` 阶段的候选筛选部分需要加入两个步骤：
-1. 论文发表情况分析
+1. 论文发表情况分析 (参考代码见:  @ref_code/dblp_publication_query/dblp_query_demo.py)
 2. 论文作者中h_index排名topK的作者是否是大佬(IEEE/ ACM/ AAAI fellow)
 我们要优先选择已经正式发表的论文 + 论文作者中h_index排名topK的作者包含大佬的论文进行后续stage的分析。
-同时，作为回退策略，当我们筛选到的论文列表中没有作者包含大佬的论文时， 系统仍然应当返回max_h_index较高的作者写的那几篇论文，然后给出max_h_index 作者对应的title (这个内容在用llm去检查某人是否是大佬时已经顺便让LLM获取了)。
+同时，作为回退策略，当我们筛选到的论文列表中没有作者包含大佬的论文时， 系统仍然应当返回max_h_index较高的作者写的那几篇论文，然后给出max_h_index 的作者信息。 (参考代码见 @ref_code/author_title_query/fast_llm_web_search_title_demo.py )
+3. 作者指标补全 阶段，我需要获取更加完整的作者信息，包括作者当前所属的机构、h_index等信息，供后续大佬筛选时用，并且要在最后的引文评价分析中指出max_h_index对应的作者所在的机构和作者名称。
