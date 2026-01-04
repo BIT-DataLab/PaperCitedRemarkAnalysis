@@ -43,6 +43,25 @@ def _sorted_authors_by_h_index(authors: List[JsonDict]) -> List[JsonDict]:
     return sorted(authors, key=sort_key)
 
 
+def _normalize_author_name(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip().lower()
+
+
+def _is_self_citation(target_author: Optional[str], authors: List[JsonDict]) -> Optional[bool]:
+    if not target_author or not str(target_author).strip():
+        return None
+    target_norm = _normalize_author_name(target_author)
+    if not target_norm:
+        return None
+    for author in authors:
+        name = _normalize_author_name(author.get("name"))
+        if name and name == target_norm:
+            return True
+    return False
+
+
 def _copy_pdf(src: Path, dest_dir: Path, paper_id: str) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest_path = dest_dir / f"{paper_id}.pdf"
@@ -73,12 +92,10 @@ def _build_topk_authors(
         name = author.get("name")
         affiliation = author.get("affiliation")
         institutions = author.get("institutions") or []
-        last_known_institutions = author.get("last_known_institutions") or []
         statuses, sources, error = lookup_fellow_status(
             str(name or ""),
             str(affiliation or "") if affiliation is not None else None,
             institutions=institutions if institutions else None,
-            last_known_institutions=last_known_institutions if last_known_institutions else None,
             llm_config_path=llm_config_path,
             max_results=fellow_web_search_topk,
             timeout_s=web_search_timeout_s,
@@ -95,7 +112,6 @@ def _build_topk_authors(
                 "name": name,
                 "affiliation": affiliation,
                 "institutions": institutions,
-                "last_known_institutions": last_known_institutions,
                 "h_index": author.get("h_index"),
                 "fellow_status": statuses,
                 "fellow_status_sources": sources,
@@ -120,6 +136,7 @@ class E2EOutputs:
 def run_e2e_single_paper(
     paper_to_analyze: str,
     *,
+    target_author: Optional[str] = None,
     llm_config_path: Optional[PathLike] = None,
     res_dir: PathLike = "log/e2e_single_paper_run",
     log_dir: PathLike = "log/trace",
@@ -167,6 +184,7 @@ def run_e2e_single_paper(
         "fellow_check_topK": fellow_check_topK,
         "fellow_web_search_topk": fellow_web_search_topk,
         "roll_back_paper_topK": roll_back_paper_topK,
+        "target_author": target_author,
         "openalex_match_threshold": openalex_match_threshold,
         "ref_ctx_match_threshold": ref_ctx_match_threshold,
         "window_size": window_size,
@@ -227,6 +245,7 @@ def run_e2e_single_paper(
         "matched_title": match.get("paper_title") or paper_to_analyze,
         "paper_id": match.get("paper_id"),
         "paper_doi": match.get("paper_doi"),
+        "target_author": target_author,
     }
 
     trace.write(
@@ -375,6 +394,7 @@ def run_e2e_single_paper(
         paper_id = work.get("paper_id") or "unknown"
         paper_title = work.get("paper_title") or ""
         query = f"{paper_title}{pdf_query_suffix}".strip()
+        self_citation = _is_self_citation(target_author, work.get("authors") or [])
 
         pdf_path: Optional[str] = None
         pdf_error: Optional[str] = None
@@ -508,6 +528,7 @@ def run_e2e_single_paper(
                 "has_fellow_topk": work.get("has_fellow_topk"),
                 "selection_reason": work.get("selection_reason"),
                 "max_h_index_author": work.get("max_h_index_author"),
+                "self_citation": self_citation,
             },
             "pdf": {
                 "query": query,

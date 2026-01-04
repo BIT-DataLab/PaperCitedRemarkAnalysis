@@ -58,7 +58,6 @@ AUTHOR_MATCH_FIELDS = [
     "works_count",
     "cited_by_count",
     "summary_stats",
-    "last_known_institutions",
 ]
 AUTHOR_MATCH_SELECT = ",".join(AUTHOR_MATCH_FIELDS)
 
@@ -71,7 +70,6 @@ AUTHOR_META_FIELDS = [
     "cited_by_count",
     "summary_stats",
     "counts_by_year",
-    "last_known_institutions",
     "affiliations",
 ]
 AUTHOR_META_SELECT = ",".join(AUTHOR_META_FIELDS)
@@ -95,4 +93,3 @@ AUTHOR_TOP_WORKS_FIELDS = [
     "authorships",
 ]
 AUTHOR_TOP_WORKS_SELECT = ",".join(AUTHOR_TOP_WORKS_FIELDS)
-

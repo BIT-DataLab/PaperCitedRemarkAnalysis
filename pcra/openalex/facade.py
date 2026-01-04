@@ -228,14 +228,19 @@ class OpenAlexFacade:
         id_url = author.get("id")
         author_id = to_short_openalex_id(id_url) or to_short_openalex_id(author.get("openalex_id"))
         summary_stats = author.get("summary_stats") or {}
-        last_known_institutions = [
-            inst
-            for inst in (
-                normalize_institution(x) for x in (author.get("last_known_institutions") or [])
-            )
-            if inst
-        ]
-        last_inst = last_known_institutions[0] if last_known_institutions else {}
+        institution = None
+        affiliations = author.get("affiliations") or []
+        if isinstance(affiliations, list):
+            for aff in affiliations:
+                if not isinstance(aff, dict):
+                    continue
+                inst = aff.get("institution")
+                if not isinstance(inst, dict):
+                    continue
+                name = inst.get("display_name") or inst.get("name")
+                if isinstance(name, str) and name.strip():
+                    institution = name.strip()
+                    break
         return {
             "author_id": author_id,
             "author_name": author.get("display_name"),
@@ -243,8 +248,7 @@ class OpenAlexFacade:
             "h_index": summary_stats.get("h_index") or author.get("h_index"),
             "works_count": author.get("works_count"),
             "cited_by_count": author.get("cited_by_count"),
-            "institution": last_inst.get("display_name"),
-            "last_known_institutions": last_known_institutions,
+            "institution": institution,
             "summary_stats": summary_stats,
             # aliases / raw
             "openalex_id": author_id,

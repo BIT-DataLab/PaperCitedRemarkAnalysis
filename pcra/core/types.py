@@ -34,7 +34,6 @@ class AuthorInfo(TypedDict, total=False):
     h_index: Optional[int]
     affiliation: Optional[str]
     institutions: List[InstitutionInfo]
-    last_known_institutions: List[InstitutionInfo]
     fellow_status: FellowStatus
     fellow_status_sources: List[str]
 

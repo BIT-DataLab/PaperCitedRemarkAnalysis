@@ -62,6 +62,14 @@ def _format_fellow_status(status: Optional[Dict[str, Any]]) -> str:
     return f"IEEE={ieee}, ACM={acm}, AAAI={aaai}"
 
 
+def _format_self_citation(value: Any) -> str:
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    return "unknown"
+
+
 def build_paper_summary(data: JsonDict) -> JsonDict:
     ref_ctx = data.get("ref_ctx") or {}
     contexts = ref_ctx.get("contexts") or ref_ctx.get("contexts_scored") or []
@@ -84,6 +92,7 @@ def build_paper_summary(data: JsonDict) -> JsonDict:
     return {
         "paper_id": citing.get("paper_id"),
         "citing_title": citing.get("paper_title"),
+        "self_citation": citing.get("self_citation"),
         "contexts_total": len(contexts),
         "scored": len(scores),
         "errors": errors,
@@ -145,6 +154,7 @@ def render_paper_report(data: JsonDict, paper_id: str, *, top_n: int = 3) -> str
         f"- cited_by_count: {citing.get('cited_by_count')}",
         f"- selection_reason: {citing.get('selection_reason')}",
         f"- has_fellow_topk: {citing.get('has_fellow_topk')}",
+        f"- self_citation: {_format_self_citation(citing.get('self_citation'))}",
     ]
     if max_author:
         lines.append(
@@ -161,6 +171,8 @@ def render_paper_report(data: JsonDict, paper_id: str, *, top_n: int = 3) -> str
         f"- matched_title: {target.get('matched_title')}",
         f"- paper_id: {target.get('paper_id')}",
     ]
+    if target.get("target_author"):
+        lines.append(f"- target_author: {target.get('target_author')}")
     if topk_authors:
         lines += ["", "## TopK Authors"]
         for author in topk_authors:
@@ -296,13 +308,13 @@ def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]
         remarks.append(
             {
                 "paper_title": citing.get("paper_title"),
+                "self_citation": citing.get("self_citation"),
                 "topk_authors": [
                     {
                         "author_id": a.get("author_id"),
                         "name": a.get("name"),
                         "affiliation": a.get("affiliation"),
                         "institutions": a.get("institutions"),
-                        "last_known_institutions": a.get("last_known_institutions"),
                         "h_index": a.get("h_index"),
                         "fellow_status": a.get("fellow_status"),
                     }
@@ -354,6 +366,10 @@ def render_summary_report_v2(
         f"- query_title: {target.get('query_title')}",
         f"- matched_title: {target.get('matched_title')}",
         f"- paper_id: {target.get('paper_id')}",
+    ]
+    if target.get("target_author"):
+        md_lines.append(f"- target_author: {target.get('target_author')}")
+    md_lines += [
         "",
         "## Overall",
         f"- total_contexts: {total_contexts}",
@@ -376,6 +392,7 @@ def render_summary_report_v2(
                 f"- paper_id: {citing.get('paper_id')}",
                 f"- contexts: {len(contexts)}",
                 f"- has_fellow_topk: {citing.get('has_fellow_topk')}",
+                f"- self_citation: {_format_self_citation(citing.get('self_citation'))}",
             ]
         )
         if max_author:
@@ -395,6 +412,7 @@ def render_summary_report_v2(
             "query_title": target.get("query_title"),
             "matched_title": target.get("matched_title"),
             "paper_id": target.get("paper_id"),
+            "target_author": target.get("target_author"),
         },
         "cited_paper_remarks": cited_paper_remarks,
     }

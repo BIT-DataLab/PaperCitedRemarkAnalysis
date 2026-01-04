@@ -1,5 +1,11 @@
 """CLI: single paper end-to-end citation remark analysis (refactor pipeline).
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log
+
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log  --target-author "Chengliang Chai"
+
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "GoodCore: Data-effective and Data-efficient Machine Learning through Coreset Selection over Incomplete Data" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/res --log-dir trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/log  --target-author "Chengliang Chai"
+
+
+
 
 """
 
@@ -31,6 +37,7 @@ def _maybe_int(value: Optional[str]) -> Optional[int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="E2E pipeline: single paper citation remark analysis.")
     parser.add_argument("--paper-to-analyze", required=True, help="Target paper title to analyze (query).")
+    parser.add_argument("--target-author", default=None, help="Target author name for self-citation detection.")
     parser.add_argument("--llm-config-path", default=None, help="Path to LLM YAML config.")
     parser.add_argument("--res-dir", default="trace_log/v1_e2e_single_paper_run/res", help="Result output directory.")
     parser.add_argument("--log-dir", default="trace_log/v1_e2e_single_paper_run/log", help="Trace log output directory.")
@@ -81,6 +88,7 @@ def main() -> None:
 
     summary = run_e2e_single_paper(
         args.paper_to_analyze,
+        target_author=args.target_author,
         llm_config_path=args.llm_config_path,
         res_dir=args.res_dir,
         log_dir=args.log_dir,

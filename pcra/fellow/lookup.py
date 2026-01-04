@@ -18,7 +18,6 @@ Given the following information:
 - Scholar name: {name}
 - Affiliation: {affiliation}
 - Paper institutions: {paper_institutions}
-- Last known institutions (OpenAlex): {last_known_institutions}
 
 Please check separately whether this scholar has been awarded the following honors:
 - IEEE Fellow
@@ -325,14 +324,12 @@ def _make_cache_key(
     name: str,
     affiliation: str,
     paper_institutions: str,
-    last_known_institutions: str,
     settings: Mapping[str, Any],
 ) -> str:
     parts = [
         _normalize_text(name),
         _normalize_text(affiliation),
         _normalize_text(paper_institutions),
-        _normalize_text(last_known_institutions),
         str(settings.get("model")),
         int(settings.get("max_results") or 0),
     ]
@@ -383,7 +380,6 @@ def lookup_fellow_status(
     affiliation: Optional[str],
     *,
     institutions: Optional[List[Dict[str, Any]]] = None,
-    last_known_institutions: Optional[List[Dict[str, Any]]] = None,
     llm_config_path: Optional[Path],
     max_results: Optional[int],
     timeout_s: Optional[int] = None,
@@ -405,14 +401,12 @@ def lookup_fellow_status(
         return _default_statuses(), [], f"{type(exc).__name__}: {exc}"
 
     paper_institutions = _format_institutions(institutions)
-    last_known_formatted = _format_institutions(last_known_institutions)
-
     cache_key = None
     cache = None
     if cache_path is not None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache = _load_cache(cache_path)
-        cache_key = _make_cache_key(name, affiliation or "", paper_institutions, last_known_formatted, settings)
+        cache_key = _make_cache_key(name, affiliation or "", paper_institutions, settings)
         cached = _get_cached(cache, cache_key)
         if cached:
             statuses = cached.get("statuses") or {}
@@ -427,7 +421,6 @@ def lookup_fellow_status(
         name=name,
         affiliation=affiliation or "Unknown",
         paper_institutions=paper_institutions or "Unknown",
-        last_known_institutions=last_known_formatted or "Unknown",
     )
     try:
         content, annotations = _call_openrouter_chat(prompt, settings)

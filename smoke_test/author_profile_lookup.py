@@ -19,6 +19,21 @@ if str(_REPO_ROOT) not in sys.path:
 from pcra.openalex import OpenAlexFacade
 
 
+def _extract_institution_from_affiliations(affiliations: Any) -> str:
+    if not isinstance(affiliations, list):
+        return ""
+    for aff in affiliations:
+        if not isinstance(aff, dict):
+            continue
+        inst = aff.get("institution")
+        if not isinstance(inst, dict):
+            continue
+        name = inst.get("display_name") or inst.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return ""
+
+
 def fetch_openalex_author_profile(author_id: str) -> Dict[str, Any]:
     """Return OpenAlex Author metadata plus a few convenience top-level keys."""
     facade = OpenAlexFacade()
@@ -26,15 +41,15 @@ def fetch_openalex_author_profile(author_id: str) -> Dict[str, Any]:
     data = info.get("meta") or {}
 
     summary_stats = data.get("summary_stats") or {}
-    last_known_institutions = data.get("last_known_institutions") or []
-    last_institution = last_known_institutions[0] if last_known_institutions else {}
+    affiliations = data.get("affiliations")
+    institution = _extract_institution_from_affiliations(affiliations)
 
     profile: Dict[str, Any] = {
         # Convenience / backward compatible keys
         "openalex_id": info.get("author_id"),
         "name": data.get("display_name"),
         "h_index": info.get("h_index"),
-        "institution": last_institution.get("display_name"),
+        "institution": institution or None,
         "orcid": data.get("orcid") or (data.get("ids") or {}).get("orcid"),
         # Raw (selected) OpenAlex Author object fields
         "id": data.get("id"),
@@ -43,8 +58,7 @@ def fetch_openalex_author_profile(author_id: str) -> Dict[str, Any]:
         "cited_by_count": data.get("cited_by_count"),
         "summary_stats": summary_stats,
         "counts_by_year": data.get("counts_by_year"),
-        "affiliations": data.get("affiliations"),
-        "last_known_institutions": last_known_institutions,
+        "affiliations": affiliations,
         "ids": data.get("ids"),
     }
     return profile

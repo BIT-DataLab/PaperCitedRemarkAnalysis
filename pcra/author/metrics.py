@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from pcra.openalex import authors as authors_api
-from pcra.openalex.fields import AUTHOR_MATCH_SELECT
+from pcra.openalex.fields import AUTHOR_METRICS_SELECT
 from pcra.openalex.utils import dedupe_preserve_order, normalize_institution, to_short_openalex_id
 from pcra.openalex.client import OpenAlexClient
 
@@ -60,16 +60,13 @@ def enrich_authors_with_metrics(
         return works
 
     authors = authors_api.get_authors_by_openalex_ids(
-        author_ids, client=client, select=AUTHOR_MATCH_SELECT, chunk_size=chunk_size
+        author_ids, client=client, select=AUTHOR_METRICS_SELECT, chunk_size=chunk_size
     )
     metrics_map: Dict[str, Dict[str, Any]] = {}
     for aid, a in authors.items():
         summary = a.get("summary_stats") or {}
-        last_known = _normalize_institutions(a.get("last_known_institutions") or [])
         metrics_map[aid] = {
             "h_index": summary.get("h_index") or a.get("h_index"),
-            "affiliation": _extract_affiliation_from_institutions(last_known),
-            "last_known_institutions": last_known,
         }
 
     for w in works:
@@ -86,18 +83,8 @@ def enrich_authors_with_metrics(
                 continue
             if metric.get("h_index") is not None:
                 a["h_index"] = metric["h_index"]
-            if metric.get("affiliation"):
-                a["affiliation"] = metric["affiliation"]
-            if metric.get("last_known_institutions"):
-                a["last_known_institutions"] = metric["last_known_institutions"]
             if not a.get("affiliation"):
-                insts = a.get("institutions") or []
-                if insts:
-                    inst = insts[0]
-                    if isinstance(inst, dict):
-                        a["affiliation"] = inst.get("display_name")
-                    else:
-                        a["affiliation"] = inst
+                a["affiliation"] = _extract_affiliation_from_institutions(institutions)
     return works
 
 
@@ -119,5 +106,4 @@ def compute_max_h_index_author(authors: List[Dict[str, Any]]) -> Optional[Dict[s
         "h_index": best_h,
         "affiliation": best.get("affiliation"),
         "institutions": best.get("institutions"),
-        "last_known_institutions": best.get("last_known_institutions"),
     }
