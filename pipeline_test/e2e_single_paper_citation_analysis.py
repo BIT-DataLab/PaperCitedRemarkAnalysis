@@ -86,6 +86,8 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    Path(args.res_dir).mkdir(parents=True, exist_ok=True)
+    Path(args.log_dir).mkdir(parents=True, exist_ok=True)
 
     summary = run_e2e_single_paper(
         args.paper_to_analyze,

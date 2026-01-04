@@ -308,6 +308,7 @@ def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]
         remarks.append(
             {
                 "paper_title": citing.get("paper_title"),
+                "has_fellow_topk": citing.get("has_fellow_topk"),
                 "reference_entry": ref_ctx.get("reference_entry"),
                 "self_citation": citing.get("self_citation"),
                 "topk_authors": [
@@ -354,6 +355,9 @@ def render_summary_report_v2(
         paper_to_analyze = (scored_payloads[0].get("paper_to_analyze") if scored_payloads else {}) or {}
     target = paper_to_analyze or {}
     cited_paper_remarks = build_cited_paper_remarks(scored_payloads)
+    has_fellow_remarks = [remark for remark in cited_paper_remarks if remark.get("has_fellow_topk") is True]
+    not_has_fellow_remarks = [remark for remark in cited_paper_remarks if remark.get("has_fellow_topk") is not True]
+    cited_paper_remarks = has_fellow_remarks + not_has_fellow_remarks
 
     total_contexts = sum(int(s.get("contexts_total") or 0) for s in summaries)
     total_scored = sum(int(s.get("scored") or 0) for s in summaries)
