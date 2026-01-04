@@ -51,8 +51,7 @@ Return results in a structured, per-organization format.
 STRICT CONSTRAINTS:
 
 1. Prefer official HTML pages.
-   - Do NOT open or cite PDF files unless unavoidable.
-   - Avoid CV PDFs and IEEE Xplore PDFs.
+   - Do NOT open or cite PDF files in any situation.
 
 2. Evidence limit:
    - Use at most ONE reliable source per organization.
