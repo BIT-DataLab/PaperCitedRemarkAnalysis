@@ -308,6 +308,7 @@ def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]
         remarks.append(
             {
                 "paper_title": citing.get("paper_title"),
+                "reference_entry": ref_ctx.get("reference_entry"),
                 "self_citation": citing.get("self_citation"),
                 "topk_authors": [
                     {

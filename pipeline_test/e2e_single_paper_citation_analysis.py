@@ -5,6 +5,7 @@ python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "
 python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "GoodCore: Data-effective and Data-efficient Machine Learning through Coreset Selection over Incomplete Data" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/res --log-dir trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/log  --target-author "Chengliang Chai"
 
 
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "Database Meets Artificial Intelligence: A Survey" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/database_meets_artificial_intelligence_a_survey/res --log-dir trace_log/database_meets_artificial_intelligence_a_survey/log  --target-author "Chengliang Chai"
 
 
 """

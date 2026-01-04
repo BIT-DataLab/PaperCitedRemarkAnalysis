@@ -27,7 +27,7 @@ Please check separately whether this scholar has been awarded the following hono
 For each organization, report:
 - Award status: Yes / No / Unknown
 - Year of award (if available)
-- Source of information (official website, announcement, or homepage)
+- Source of information (personal homepage or Wikipedia only)
 
 Do NOT infer or guess.
 If no reliable evidence is found, mark the status as Unknown.
@@ -35,10 +35,14 @@ Return results in a structured, per-organization format.
 
 STRICT CONSTRAINTS:
 
-1. Prefer official HTML pages.
-2. Evidence limit: use at most ONE reliable source per organization.
-3. Search budget: shallow search only; if evidence is not found quickly, return "Unknown".
-4. Output format (must follow exactly):
+1. Allowed sources ONLY:
+   - The scholar's personal homepage (lab/university page with their bio/CV).
+   - Wikipedia page about the scholar.
+2. Disallowed sources:
+   - ACM/IEEE/AAAI sites, award lists, announcements, conference pages, or other org sites.
+3. Evidence limit: use at most ONE reliable source per organization.
+4. Search budget: shallow search only; if evidence is not found quickly, return "Unknown".
+5. Output format (must follow exactly):
 
 IEEE Fellow: Yes | No | Unknown
 Year: <year or N/A>

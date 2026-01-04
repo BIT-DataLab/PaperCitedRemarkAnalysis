@@ -9,6 +9,11 @@ from . import config
 from .models import ReferenceEntry
 
 _INLINE_REF_ENTRY_START_RE = re.compile(r"\.\s+\[(\d+)\]\s+")
+_NUMBERED_LIST_START_RE = re.compile(
+    r"^\s*(?:[-*\u2022]\s+)?(\d{1,3})[.)]\s+",
+    re.MULTILINE,
+)
+_INLINE_NUMBERED_LIST_RE = re.compile(r"(?<!\S)(\d{1,3})[.)]\s+")
 _YEAR_RE = re.compile(r"\b(19|20)\d{2}[a-z]?\b")
 _LEADING_MARKER_RE = re.compile(
     r"^\s*(?:(?:[-*\u2022]\s+)?\[\d+\]\s+|[-*\u2022]\s+|\d+[.)]\s+)"
@@ -140,6 +145,25 @@ def _find_list_item_starts(references_text: str) -> List[int]:
     return [m.start() for m in _LIST_ITEM_START_RE.finditer(references_text)]
 
 
+def _find_numbered_list_markers(references_text: str) -> List[Tuple[int, int]]:
+    markers: List[Tuple[int, int]] = []
+    for m in _NUMBERED_LIST_START_RE.finditer(references_text):
+        markers.append((m.start(), int(m.group(1))))
+
+    if not markers:
+        return markers
+
+    offset = 0
+    for line in references_text.splitlines(keepends=True):
+        if not _NUMBERED_LIST_START_RE.match(line):
+            offset += len(line)
+            continue
+        for m in _INLINE_NUMBERED_LIST_RE.finditer(line):
+            markers.append((offset + m.start(), int(m.group(1))))
+        offset += len(line)
+    return markers
+
+
 def parse_reference_entries(
     references_text: str,
     *,
@@ -153,11 +177,17 @@ def parse_reference_entries(
     meta: Dict[str, Any] = {"method": None, "has_numeric_ids": False}
 
     start_markers: List[Tuple[int, int]] = []
+    used_numbered_list = False
     for m in config.REF_ENTRY_START_RE.finditer(references_text):
         start_markers.append((m.start(), int(m.group(1))))
     for m in _INLINE_REF_ENTRY_START_RE.finditer(references_text):
         # group(1) captures digits; the `[` is right before it.
         start_markers.append((m.start(1) - 1, int(m.group(1))))
+    if not start_markers:
+        list_markers = _find_numbered_list_markers(references_text)
+        if list_markers:
+            start_markers.extend(list_markers)
+            used_numbered_list = True
 
     if start_markers:
         start_markers.sort(key=lambda x: x[0])
@@ -168,7 +198,8 @@ def parse_reference_entries(
                 continue
             seen_pos.add(pos)
             dedup.append((pos, rid))
-        meta.update({"method": "numeric", "has_numeric_ids": True})
+        method = "numeric_list" if used_numbered_list else "numeric"
+        meta.update({"method": method, "has_numeric_ids": True})
         entries = _slice_entries_by_markers(references_text, dedup)
         return (entries, meta) if return_meta else entries
 
