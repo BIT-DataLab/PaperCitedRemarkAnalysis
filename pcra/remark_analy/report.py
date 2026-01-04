@@ -88,10 +88,12 @@ def build_paper_summary(data: JsonDict) -> JsonDict:
 
     stats = _score_stats(scores)
     citing = data.get("citing_paper") or {}
+    venue = citing.get("venue") or (citing.get("publication_status") or {}).get("venue")
 
     return {
         "paper_id": citing.get("paper_id"),
         "citing_title": citing.get("paper_title"),
+        "venue": venue,
         "self_citation": citing.get("self_citation"),
         "contexts_total": len(contexts),
         "scored": len(scores),
@@ -305,9 +307,11 @@ def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]
         ref_ctx = data.get("ref_ctx") or {}
         contexts = ref_ctx.get("contexts_scored") or ref_ctx.get("contexts") or []
         citing = data.get("citing_paper") or {}
+        venue = citing.get("venue") or (citing.get("publication_status") or {}).get("venue")
         remarks.append(
             {
                 "paper_title": citing.get("paper_title"),
+                "venue": venue,
                 "has_fellow_topk": citing.get("has_fellow_topk"),
                 "reference_entry": ref_ctx.get("reference_entry"),
                 "self_citation": citing.get("self_citation"),

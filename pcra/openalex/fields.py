@@ -26,6 +26,7 @@ WORK_CITED_BY_FIELDS = [
     "doi",
     "publication_year",
     "cited_by_count",
+    "primary_location",
     "authorships",
 ]
 WORK_CITED_BY_SELECT = ",".join(WORK_CITED_BY_FIELDS)

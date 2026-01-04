@@ -514,6 +514,8 @@ def run_e2e_single_paper(
             },
         )
 
+        status_venue = (work.get("publication_status") or {}).get("venue")
+        venue = status_venue or work.get("venue")
         payload: JsonDict = {
             "generated_at": _utc_now_iso(),
             "run_id": run_ctx.run_id,
@@ -523,6 +525,7 @@ def run_e2e_single_paper(
                 "paper_title": work.get("paper_title"),
                 "year": work.get("year"),
                 "cited_by_count": work.get("cited_by_count"),
+                "venue": venue,
                 "publication_status": work.get("publication_status"),
                 "topk_authors": work.get("topk_authors"),
                 "has_fellow_topk": work.get("has_fellow_topk"),

@@ -180,6 +180,24 @@ class OpenAlexFacade:
 
     # --------------------------- Dehydrators ---------------------------- #
     @staticmethod
+    def _extract_venue(work: Dict[str, Any]) -> Optional[str]:
+        primary = work.get("primary_location") or {}
+        source = primary.get("source") or {}
+        for key in ("display_name", "name"):
+            value = source.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        host = work.get("host_venue") or {}
+        for key in ("display_name", "name"):
+            value = host.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        venue = work.get("venue")
+        if isinstance(venue, str) and venue.strip():
+            return venue.strip()
+        return None
+
+    @staticmethod
     def _dehydrate_work(work: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         if not work:
             return None
@@ -187,6 +205,7 @@ class OpenAlexFacade:
         paper_id = to_short_openalex_id(id_url) or to_short_openalex_id(work.get("openalex_id"))
         title = work.get("display_name") or work.get("title")
         doi = work.get("doi") or (work.get("ids") or {}).get("doi")
+        venue = OpenAlexFacade._extract_venue(work)
 
         authors: List[Dict[str, Any]] = []
         for auth in work.get("authorships") or []:
@@ -212,6 +231,7 @@ class OpenAlexFacade:
             "paper_doi": doi,
             "year": work.get("publication_year"),
             "cited_by_count": work.get("cited_by_count"),
+            "venue": venue,
             "authors": authors,
             # aliases / raw
             "openalex_id": paper_id,

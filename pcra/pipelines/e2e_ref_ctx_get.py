@@ -75,6 +75,7 @@ def _summarize_candidate(work: JsonDict) -> JsonDict:
         "paper_doi": work.get("paper_doi"),
         "year": work.get("year"),
         "cited_by_count": work.get("cited_by_count"),
+        "venue": work.get("venue"),
         "max_author_h_index": max_h,
         "authors": [
             {

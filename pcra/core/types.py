@@ -43,6 +43,7 @@ class Candidate(TypedDict, total=False):
     paper_title: Optional[str]
     year: Optional[int]
     cited_by_count: Optional[int]
+    venue: Optional[str]
     authors: List[AuthorInfo]
     max_h_index_author: Optional[AuthorInfo]
     publication_status: PublicationStatus
