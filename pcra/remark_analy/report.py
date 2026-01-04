@@ -298,8 +298,11 @@ def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]
                 "paper_title": citing.get("paper_title"),
                 "topk_authors": [
                     {
+                        "author_id": a.get("author_id"),
                         "name": a.get("name"),
                         "affiliation": a.get("affiliation"),
+                        "institutions": a.get("institutions"),
+                        "last_known_institutions": a.get("last_known_institutions"),
                         "h_index": a.get("h_index"),
                         "fellow_status": a.get("fellow_status"),
                     }

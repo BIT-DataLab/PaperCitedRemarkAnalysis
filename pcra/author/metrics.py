@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from pcra.openalex import authors as authors_api
 from pcra.openalex.fields import AUTHOR_MATCH_SELECT
-from pcra.openalex.utils import dedupe_preserve_order, to_short_openalex_id
+from pcra.openalex.utils import dedupe_preserve_order, normalize_institution, to_short_openalex_id
 from pcra.openalex.client import OpenAlexClient
 
 
@@ -21,8 +21,23 @@ def collect_author_ids_from_works(works: List[Dict[str, Any]]) -> List[str]:
     return dedupe_preserve_order(ids)
 
 
-def _extract_affiliation(author: Dict[str, Any]) -> Optional[str]:
-    institutions = author.get("last_known_institutions") or []
+def _normalize_institutions(items: Any) -> List[Dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    normalized: List[Dict[str, Any]] = []
+    for inst in items:
+        if isinstance(inst, dict):
+            norm = normalize_institution(inst)
+            if norm:
+                normalized.append(norm)
+        elif isinstance(inst, str):
+            name = inst.strip()
+            if name:
+                normalized.append({"display_name": name})
+    return normalized
+
+
+def _extract_affiliation_from_institutions(institutions: List[Dict[str, Any]]) -> Optional[str]:
     if institutions:
         inst = institutions[0] or {}
         name = inst.get("display_name")
@@ -50,13 +65,18 @@ def enrich_authors_with_metrics(
     metrics_map: Dict[str, Dict[str, Any]] = {}
     for aid, a in authors.items():
         summary = a.get("summary_stats") or {}
+        last_known = _normalize_institutions(a.get("last_known_institutions") or [])
         metrics_map[aid] = {
             "h_index": summary.get("h_index") or a.get("h_index"),
-            "affiliation": _extract_affiliation(a),
+            "affiliation": _extract_affiliation_from_institutions(last_known),
+            "last_known_institutions": last_known,
         }
 
     for w in works:
         for a in w.get("authors") or []:
+            institutions = _normalize_institutions(a.get("institutions") or [])
+            if institutions:
+                a["institutions"] = institutions
             aid = a.get("author_id")
             if not aid:
                 continue
@@ -68,10 +88,16 @@ def enrich_authors_with_metrics(
                 a["h_index"] = metric["h_index"]
             if metric.get("affiliation"):
                 a["affiliation"] = metric["affiliation"]
+            if metric.get("last_known_institutions"):
+                a["last_known_institutions"] = metric["last_known_institutions"]
             if not a.get("affiliation"):
                 insts = a.get("institutions") or []
                 if insts:
-                    a["affiliation"] = insts[0]
+                    inst = insts[0]
+                    if isinstance(inst, dict):
+                        a["affiliation"] = inst.get("display_name")
+                    else:
+                        a["affiliation"] = inst
     return works
 
 
@@ -92,4 +118,6 @@ def compute_max_h_index_author(authors: List[Dict[str, Any]]) -> Optional[Dict[s
         "name": best.get("name"),
         "h_index": best_h,
         "affiliation": best.get("affiliation"),
+        "institutions": best.get("institutions"),
+        "last_known_institutions": best.get("last_known_institutions"),
     }

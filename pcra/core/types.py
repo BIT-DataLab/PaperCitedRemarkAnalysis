@@ -21,11 +21,20 @@ class FellowStatus(TypedDict, total=False):
     aaai: str
 
 
+class InstitutionInfo(TypedDict, total=False):
+    id: Optional[str]
+    display_name: Optional[str]
+    ror: Optional[str]
+    country_code: Optional[str]
+
+
 class AuthorInfo(TypedDict, total=False):
     author_id: Optional[str]
     name: Optional[str]
     h_index: Optional[int]
     affiliation: Optional[str]
+    institutions: List[InstitutionInfo]
+    last_known_institutions: List[InstitutionInfo]
     fellow_status: FellowStatus
     fellow_status_sources: List[str]
 

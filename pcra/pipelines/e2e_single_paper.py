@@ -72,9 +72,13 @@ def _build_topk_authors(
     for author in topk_raw:
         name = author.get("name")
         affiliation = author.get("affiliation")
+        institutions = author.get("institutions") or []
+        last_known_institutions = author.get("last_known_institutions") or []
         statuses, sources, error = lookup_fellow_status(
             str(name or ""),
             str(affiliation or "") if affiliation is not None else None,
+            institutions=institutions if institutions else None,
+            last_known_institutions=last_known_institutions if last_known_institutions else None,
             llm_config_path=llm_config_path,
             max_results=fellow_web_search_topk,
             timeout_s=web_search_timeout_s,
@@ -87,8 +91,11 @@ def _build_topk_authors(
             has_fellow = True
         topk_authors.append(
             {
+                "author_id": author.get("author_id"),
                 "name": name,
                 "affiliation": affiliation,
+                "institutions": institutions,
+                "last_known_institutions": last_known_institutions,
                 "h_index": author.get("h_index"),
                 "fellow_status": statuses,
                 "fellow_status_sources": sources,

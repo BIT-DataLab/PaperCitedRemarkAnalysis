@@ -1,5 +1,5 @@
 """CLI: single paper end-to-end citation remark analysis (refactor pipeline).
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/v1_e2e_single_paper_run/res --log-dir trace_log/v1_e2e_single_paper_run/log
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log
 
 """
 
@@ -53,7 +53,7 @@ def main() -> None:
         default=3,
         help="Fallback Top-K papers by max h-index when no Fellow is found.",
     )
-    parser.add_argument("--fulltext-method", default="pymupdfllm", help="Fulltext extraction method.")
+    parser.add_argument("--fulltext-method", default="mineru", help="Fulltext extraction method.") # "pymupdf", "pymupdfllm", "mineru"
     parser.add_argument("--max-pages", type=int, default=50, help="Max pages used when truncating long PDFs.")
     parser.add_argument("--window-size", type=int, default=688, help="Citation context window size (chars).")
     parser.add_argument(

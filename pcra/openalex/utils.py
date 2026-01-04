@@ -36,6 +36,23 @@ def dedupe_preserve_order(items: Iterable[T]) -> List[T]:
     return out
 
 
+def normalize_institution(inst: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not isinstance(inst, dict):
+        return None
+    name = inst.get("display_name") or inst.get("name")
+    inst_id = inst.get("id")
+    ror = inst.get("ror")
+    country_code = inst.get("country_code")
+    if not any([name, inst_id, ror, country_code]):
+        return None
+    return {
+        "id": to_short_openalex_id(inst_id) or inst_id,
+        "display_name": name,
+        "ror": ror,
+        "country_code": country_code,
+    }
+
+
 def decode_abstract_inverted_index(work: Dict[str, Any]) -> Optional[str]:
     """Decode OpenAlex abstract_inverted_index into a plain text abstract string."""
     abstract_inverted = work.get("abstract_inverted_index")
@@ -47,4 +64,3 @@ def decode_abstract_inverted_index(work: Dict[str, Any]) -> Optional[str]:
             tokens.append((pos, word))
     tokens.sort(key=lambda x: x[0])
     return " ".join(w for _, w in tokens) if tokens else None
-

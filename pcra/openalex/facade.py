@@ -18,7 +18,7 @@ from .fields import (
     WORK_MATCH_SELECT,
     WORK_META_SELECT,
 )
-from .utils import decode_abstract_inverted_index, join_fields, to_short_openalex_id
+from .utils import decode_abstract_inverted_index, join_fields, normalize_institution, to_short_openalex_id
 from . import authors as authors_api
 from . import works as works_api
 
@@ -192,6 +192,9 @@ class OpenAlexFacade:
         for auth in work.get("authorships") or []:
             author = auth.get("author") or {}
             author_id = to_short_openalex_id(author.get("id"))
+            institutions = [
+                inst for inst in (normalize_institution(x) for x in (auth.get("institutions") or [])) if inst
+            ]
             authors.append(
                 {
                     "author_id": author_id,
@@ -199,9 +202,7 @@ class OpenAlexFacade:
                     "orcid": author.get("orcid") or (author.get("ids") or {}).get("orcid"),
                     "author_position": auth.get("author_position"),
                     "is_corresponding": auth.get("is_corresponding"),
-                    "institutions": [
-                        inst.get("display_name") for inst in (auth.get("institutions") or []) if inst
-                    ],
+                    "institutions": institutions,
                 }
             )
 
@@ -227,7 +228,13 @@ class OpenAlexFacade:
         id_url = author.get("id")
         author_id = to_short_openalex_id(id_url) or to_short_openalex_id(author.get("openalex_id"))
         summary_stats = author.get("summary_stats") or {}
-        last_known_institutions = author.get("last_known_institutions") or []
+        last_known_institutions = [
+            inst
+            for inst in (
+                normalize_institution(x) for x in (author.get("last_known_institutions") or [])
+            )
+            if inst
+        ]
         last_inst = last_known_institutions[0] if last_known_institutions else {}
         return {
             "author_id": author_id,
@@ -237,10 +244,10 @@ class OpenAlexFacade:
             "works_count": author.get("works_count"),
             "cited_by_count": author.get("cited_by_count"),
             "institution": last_inst.get("display_name"),
+            "last_known_institutions": last_known_institutions,
             "summary_stats": summary_stats,
             # aliases / raw
             "openalex_id": author_id,
             "id": id_url,
             "display_name": author.get("display_name"),
         }
-

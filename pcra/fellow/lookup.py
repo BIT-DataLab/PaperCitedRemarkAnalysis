@@ -17,6 +17,8 @@ PROMPT_HONOR_CHECK = """You are performing a precise honor verification task for
 Given the following information:
 - Scholar name: {name}
 - Affiliation: {affiliation}
+- Paper institutions: {paper_institutions}
+- Last known institutions (OpenAlex): {last_known_institutions}
 
 Please check separately whether this scholar has been awarded the following honors:
 - IEEE Fellow
@@ -277,6 +279,27 @@ def _normalize_text(value: Optional[str]) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+def _format_institutions(items: Optional[Iterable[Any]]) -> str:
+    if not items:
+        return ""
+    parts: List[str] = []
+    for inst in items:
+        if isinstance(inst, str):
+            name = inst.strip()
+            if name:
+                parts.append(name)
+            continue
+        if not isinstance(inst, dict):
+            continue
+        name = inst.get("display_name") or inst.get("name")
+        ror = inst.get("ror")
+        country = inst.get("country_code")
+        segments = [seg for seg in [name, f"ror={ror}" if ror else None, f"country={country}" if country else None] if seg]
+        if segments:
+            parts.append(" | ".join(segments))
+    return "; ".join(parts)
+
+
 def _load_cache(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return {"version": CACHE_VERSION, "entries": {}}
@@ -298,10 +321,18 @@ def _save_cache(path: Path, cache: Mapping[str, Any]) -> None:
     tmp_path.replace(path)
 
 
-def _make_cache_key(name: str, affiliation: str, settings: Mapping[str, Any]) -> str:
+def _make_cache_key(
+    name: str,
+    affiliation: str,
+    paper_institutions: str,
+    last_known_institutions: str,
+    settings: Mapping[str, Any],
+) -> str:
     parts = [
         _normalize_text(name),
         _normalize_text(affiliation),
+        _normalize_text(paper_institutions),
+        _normalize_text(last_known_institutions),
         str(settings.get("model")),
         int(settings.get("max_results") or 0),
     ]
@@ -351,6 +382,8 @@ def lookup_fellow_status(
     name: str,
     affiliation: Optional[str],
     *,
+    institutions: Optional[List[Dict[str, Any]]] = None,
+    last_known_institutions: Optional[List[Dict[str, Any]]] = None,
     llm_config_path: Optional[Path],
     max_results: Optional[int],
     timeout_s: Optional[int] = None,
@@ -371,12 +404,15 @@ def lookup_fellow_status(
     except Exception as exc:
         return _default_statuses(), [], f"{type(exc).__name__}: {exc}"
 
+    paper_institutions = _format_institutions(institutions)
+    last_known_formatted = _format_institutions(last_known_institutions)
+
     cache_key = None
     cache = None
     if cache_path is not None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         cache = _load_cache(cache_path)
-        cache_key = _make_cache_key(name, affiliation or "", settings)
+        cache_key = _make_cache_key(name, affiliation or "", paper_institutions, last_known_formatted, settings)
         cached = _get_cached(cache, cache_key)
         if cached:
             statuses = cached.get("statuses") or {}
@@ -387,7 +423,12 @@ def lookup_fellow_status(
                 "aaai": str(statuses.get("AAAI Fellow") or "Unknown"),
             }, list(sources), None
 
-    prompt = PROMPT_HONOR_CHECK.format(name=name, affiliation=affiliation or "Unknown")
+    prompt = PROMPT_HONOR_CHECK.format(
+        name=name,
+        affiliation=affiliation or "Unknown",
+        paper_institutions=paper_institutions or "Unknown",
+        last_known_institutions=last_known_formatted or "Unknown",
+    )
     try:
         content, annotations = _call_openrouter_chat(prompt, settings)
     except Exception as exc:

@@ -73,8 +73,8 @@ def parse_pdf_with_mineru(pdf_path: str, pdf_file_name: str,
 
 # 示例用法：
 if __name__ == "__main__":
-    base_dir = "/data2/jproject/PaperCitedRemarkAnalysis/downloads"
-    pdf_file = "HippoRAG_Neurobiologically_Inspired_Long-Term_Memory_for_Large_....pdf"
+    base_dir = "/home/shejunzhi/project/PaperCitedRemarkAnalysis/downloads"
+    pdf_file = "test_BAIT_paper.pdf"
 
     result_json = parse_pdf_with_mineru(base_dir, pdf_file)
     keys  = result_json.keys()
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # result_json['md_content'] 这个就是字符串形式的论文markdown全文
 
 
-    with open("downloads/HippoRAG_mienrU.md", "w", encoding="utf-8") as f:
+    with open("downloads/converted/test_BAIT_paper.md", "w", encoding="utf-8") as f:
         f.write(result_json['md_content'])
     # data = json.loads(result_json['content_list'])
     # for item in data:
