@@ -53,9 +53,18 @@ def _score_stats(scores: List[int]) -> Dict[str, Optional[float]]:
     }
 
 
+def _format_fellow_status(status: Optional[Dict[str, Any]]) -> str:
+    if not status:
+        return "Unknown"
+    ieee = status.get("ieee") or "Unknown"
+    acm = status.get("acm") or "Unknown"
+    aaai = status.get("aaai") or "Unknown"
+    return f"IEEE={ieee}, ACM={acm}, AAAI={aaai}"
+
+
 def build_paper_summary(data: JsonDict) -> JsonDict:
     ref_ctx = data.get("ref_ctx") or {}
-    contexts = ref_ctx.get("contexts") or []
+    contexts = ref_ctx.get("contexts") or ref_ctx.get("contexts_scored") or []
 
     scores: List[int] = []
     errors = 0
@@ -109,7 +118,7 @@ def _top_contexts(contexts: Iterable[JsonDict], *, top_n: int, reverse: bool) ->
 def render_paper_report(data: JsonDict, paper_id: str, *, top_n: int = 3) -> str:
     summary = build_paper_summary(data)
     ref_ctx = data.get("ref_ctx") or {}
-    contexts = ref_ctx.get("contexts") or []
+    contexts = ref_ctx.get("contexts") or ref_ctx.get("contexts_scored") or []
     citing = data.get("citing_paper") or {}
     target = data.get("paper_to_analyze") or {}
 
@@ -124,6 +133,9 @@ def render_paper_report(data: JsonDict, paper_id: str, *, top_n: int = 3) -> str
             f"context={item.get('context')}"
         )
 
+    max_author = citing.get("max_h_index_author") or {}
+    topk_authors = citing.get("topk_authors") or []
+
     lines = [
         f"# Paper Report: {paper_id}",
         "",
@@ -131,12 +143,34 @@ def render_paper_report(data: JsonDict, paper_id: str, *, top_n: int = 3) -> str
         f"- title: {citing.get('paper_title')}",
         f"- year: {citing.get('year')}",
         f"- cited_by_count: {citing.get('cited_by_count')}",
-        f"- max_author_h_index: {citing.get('max_author_h_index')}",
+        f"- selection_reason: {citing.get('selection_reason')}",
+        f"- has_fellow_topk: {citing.get('has_fellow_topk')}",
+    ]
+    if max_author:
+        lines.append(
+            f"- max_h_index_author: {max_author.get('name')} "
+            f"({max_author.get('affiliation')}), h_index={max_author.get('h_index')}"
+        )
+    elif citing.get("max_author_h_index") is not None:
+        lines.append(f"- max_author_h_index: {citing.get('max_author_h_index')}")
+
+    lines += [
         "",
         "## Target Paper",
         f"- query_title: {target.get('query_title')}",
         f"- matched_title: {target.get('matched_title')}",
         f"- paper_id: {target.get('paper_id')}",
+    ]
+    if topk_authors:
+        lines += ["", "## TopK Authors"]
+        for author in topk_authors:
+            lines.append(
+                f"- {author.get('name')} ({author.get('affiliation')}), "
+                f"h_index={author.get('h_index')}, "
+                f"fellow_status={_format_fellow_status(author.get('fellow_status'))}"
+            )
+
+    lines += [
         "",
         "## Scoring Summary",
         f"- contexts_total: {summary.get('contexts_total')}",
@@ -249,5 +283,129 @@ def write_summary_report(
     overall_scores: Optional[List[int]] = None,
 ) -> None:
     md_text, json_payload = render_summary_report(summaries, overall_scores=overall_scores)
+    _write_text(md_path, md_text)
+    _write_json(json_path, json_payload)
+
+
+def build_cited_paper_remarks(scored_payloads: List[JsonDict]) -> List[JsonDict]:
+    remarks: List[JsonDict] = []
+    for data in scored_payloads:
+        ref_ctx = data.get("ref_ctx") or {}
+        contexts = ref_ctx.get("contexts_scored") or ref_ctx.get("contexts") or []
+        citing = data.get("citing_paper") or {}
+        remarks.append(
+            {
+                "paper_title": citing.get("paper_title"),
+                "topk_authors": [
+                    {
+                        "name": a.get("name"),
+                        "affiliation": a.get("affiliation"),
+                        "h_index": a.get("h_index"),
+                        "fellow_status": a.get("fellow_status"),
+                    }
+                    for a in (citing.get("topk_authors") or [])
+                ],
+                "contexts": [
+                    {
+                        "context": ctx.get("context"),
+                        "context_window_size": ctx.get("context_window_size"),
+                        "remark_score": ctx.get("remark_score"),
+                        "reason": ctx.get("reason"),
+                    }
+                    for ctx in contexts
+                ],
+            }
+        )
+    return remarks
+
+
+def render_summary_report_v2(
+    scored_payloads: List[JsonDict],
+    *,
+    paper_to_analyze: Optional[Dict[str, Any]] = None,
+) -> Tuple[str, JsonDict]:
+    summaries = [build_paper_summary(data) for data in scored_payloads]
+    overall_scores: List[int] = []
+    for data in scored_payloads:
+        ref_ctx = data.get("ref_ctx") or {}
+        contexts = ref_ctx.get("contexts_scored") or ref_ctx.get("contexts") or []
+        for ctx in contexts:
+            score = ctx.get("remark_score")
+            if _is_int_score(score):
+                overall_scores.append(score)
+
+    if paper_to_analyze is None:
+        paper_to_analyze = (scored_payloads[0].get("paper_to_analyze") if scored_payloads else {}) or {}
+    target = paper_to_analyze or {}
+    cited_paper_remarks = build_cited_paper_remarks(scored_payloads)
+
+    total_contexts = sum(int(s.get("contexts_total") or 0) for s in summaries)
+    total_scored = sum(int(s.get("scored") or 0) for s in summaries)
+    total_errors = sum(int(s.get("errors") or 0) for s in summaries)
+    overall_stats = _score_stats(overall_scores)
+
+    md_lines = [
+        "# Summary Report",
+        "",
+        "## Target Paper",
+        f"- query_title: {target.get('query_title')}",
+        f"- matched_title: {target.get('matched_title')}",
+        f"- paper_id: {target.get('paper_id')}",
+        "",
+        "## Overall",
+        f"- total_contexts: {total_contexts}",
+        f"- scored: {total_scored}",
+        f"- errors: {total_errors}",
+        f"- mean_score: {overall_stats.get('mean')}",
+        f"- median_score: {overall_stats.get('median')}",
+        "",
+        "## Per Paper",
+    ]
+
+    for data in scored_payloads:
+        citing = data.get("citing_paper") or {}
+        ref_ctx = data.get("ref_ctx") or {}
+        contexts = ref_ctx.get("contexts_scored") or ref_ctx.get("contexts") or []
+        max_author = citing.get("max_h_index_author") or {}
+        md_lines.extend(
+            [
+                f"### {citing.get('paper_title')}",
+                f"- paper_id: {citing.get('paper_id')}",
+                f"- contexts: {len(contexts)}",
+                f"- has_fellow_topk: {citing.get('has_fellow_topk')}",
+            ]
+        )
+        if max_author:
+            md_lines.append(
+                f"- max_h_index_author: {max_author.get('name')} "
+                f"({max_author.get('affiliation')}), h_index={max_author.get('h_index')}"
+            )
+        topk_authors = citing.get("topk_authors") or []
+        if topk_authors:
+            joined = ", ".join(a.get("name") or "" for a in topk_authors)
+            md_lines.append(f"- topk_authors: {joined}")
+        md_lines.append("")
+
+    summary_json = {
+        "generated_at": _utc_now_iso(),
+        "paper_to_analyze": {
+            "query_title": target.get("query_title"),
+            "matched_title": target.get("matched_title"),
+            "paper_id": target.get("paper_id"),
+        },
+        "cited_paper_remarks": cited_paper_remarks,
+    }
+
+    return "\n".join(md_lines) + "\n", summary_json
+
+
+def write_summary_report_v2(
+    md_path: Path,
+    json_path: Path,
+    *,
+    scored_payloads: List[JsonDict],
+    paper_to_analyze: Optional[Dict[str, Any]] = None,
+) -> None:
+    md_text, json_payload = render_summary_report_v2(scored_payloads, paper_to_analyze=paper_to_analyze)
     _write_text(md_path, md_text)
     _write_json(json_path, json_payload)

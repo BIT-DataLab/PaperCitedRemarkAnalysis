@@ -54,6 +54,15 @@ def score_paper_contexts(
     data: JsonDict = json.loads(Path(input_path).read_text(encoding="utf-8"))
     ref_ctx = data.get("ref_ctx") or {}
     contexts = ref_ctx.get("contexts") or []
+    window_size = ref_ctx.get("context_window_size") or ref_ctx.get("window_size")
+    max_h_index_author = (data.get("citing_paper") or {}).get("max_h_index_author")
+
+    if window_size is not None:
+        for ctx in contexts:
+            ctx.setdefault("context_window_size", window_size)
+    if max_h_index_author:
+        for ctx in contexts:
+            ctx.setdefault("max_h_index_author", max_h_index_author)
 
     scored = 0
     skipped = 0
@@ -93,6 +102,7 @@ def score_paper_contexts(
         "error_count": errors,
         "dry_run": dry_run,
     }
+    ref_ctx["contexts_scored"] = contexts
 
     _write_json(output_path, data)
     return {
