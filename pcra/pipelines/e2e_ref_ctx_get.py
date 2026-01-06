@@ -217,7 +217,12 @@ def run_e2e_ref_ctx_get(
             pdf_error = f"get_pdf unavailable: {type(e).__name__}: {e}"
         else:
             try:
-                pdf = _search_and_download(query, engine=pdf_engine)
+                pdf = _search_and_download(
+                    query,
+                    engine=pdf_engine,
+                    paper_id=paper_id,
+                    paper_title=paper_title,
+                )
                 if pdf is None:
                     pdf_error = f"PDF not found for query: {query!r}"
                 else:

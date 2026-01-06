@@ -36,6 +36,7 @@ CHROME_BINARY_REL_PATH = Path("chrome_bin") / "chrome-linux64" / "chrome"
 CHROMEDRIVER_REL_PATH = Path("chrome_bin") / "chromedriver-linux64" / "chromedriver"
 CHROMEDRIVER_LOG_REL_PATH = Path("log") / "chromedriver.log"
 DOWNLOADS_REL_DIR = Path("downloads")
+PDF_CACHE_FILENAME = "pdf_cache.json"
 
 
 def repo_root() -> Path:
@@ -58,3 +59,6 @@ def chromedriver_log_path() -> Path:
 def downloads_dir() -> Path:
     return repo_root() / DOWNLOADS_REL_DIR
 
+
+def pdf_cache_path() -> Path:
+    return downloads_dir() / PDF_CACHE_FILENAME

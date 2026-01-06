@@ -15,6 +15,7 @@ from pcra.core import RunContext
 from pcra.dblp import query_publication_status
 from pcra.fellow import lookup_fellow_status
 from pcra.get_pdf import search_and_download
+from pcra.get_pdf.download import build_pdf_filename
 from pcra.get_pdf_fulltext import get_pdf_fulltext
 from pcra.get_ref_ctx import get_paper_reference_context
 from pcra.openalex import OpenAlexClient, OpenAlexFacade
@@ -62,9 +63,9 @@ def _is_self_citation(target_author: Optional[str], authors: List[JsonDict]) -> 
     return False
 
 
-def _copy_pdf(src: Path, dest_dir: Path, paper_id: str) -> Path:
+def _copy_pdf(src: Path, dest_dir: Path, paper_id: str, paper_title: str) -> Path:
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_dir / f"{paper_id}.pdf"
+    dest_path = dest_dir / build_pdf_filename(paper_id, paper_title)
     try:
         shutil.copy2(src, dest_path)
     except Exception:
@@ -408,11 +409,16 @@ def run_e2e_single_paper(
             pdf_error = "missing_paper_title"
         else:
             try:
-                pdf = search_and_download(query, engine=pdf_engine)
+                pdf = search_and_download(
+                    query,
+                    engine=pdf_engine,
+                    paper_id=paper_id,
+                    paper_title=paper_title,
+                )
                 if pdf is None:
                     pdf_error = f"PDF not found for query: {query!r}"
                 else:
-                    pdf_path = str(_copy_pdf(Path(pdf), run_ctx.dirs["pdf_dir"], paper_id))
+                    pdf_path = str(_copy_pdf(Path(pdf), run_ctx.dirs["pdf_dir"], paper_id, paper_title))
             except Exception as exc:
                 pdf_error = f"{type(exc).__name__}: {exc}"
 

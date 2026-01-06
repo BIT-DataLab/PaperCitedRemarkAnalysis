@@ -80,3 +80,5 @@
 [33] Chengliang Chai, Guoliang Li, Jian Li, et al. A Partial-order-based Framework for Cost-effective Crowdsourced Entity Resolution VLDB Journal, 2018 (CCF A).
 
 [34] Chengliang Chai, Guoliang Li, Jian Li et al. Cost-Effective Crowdsourced Entity Resolution: A Partial-Order Approach SIGMOD 2016. (CCF A).
+
+[35] Reinforcement learning with tree-lstm for join order selection
