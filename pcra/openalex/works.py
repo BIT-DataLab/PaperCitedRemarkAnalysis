@@ -5,7 +5,13 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .client import OpenAlexClient
-from .fields import DEFAULT_CITED_BY_SORT, WORK_CITED_BY_SELECT, WORK_MATCH_SELECT, WORK_META_SELECT
+from .fields import (
+    DEFAULT_CITED_BY_SORT,
+    MAX_PER_PAGE,
+    WORK_CITED_BY_SELECT,
+    WORK_MATCH_SELECT,
+    WORK_META_SELECT,
+)
 from .utils import to_short_openalex_id
 
 
@@ -53,6 +59,32 @@ def list_citing_works(
     return data.get("results") or []
 
 
+def list_citing_works_filtered(
+    work_id: str,
+    *,
+    client: OpenAlexClient,
+    filter_expr: Optional[str] = None,
+    per_page: int = MAX_PER_PAGE,
+    select: str = WORK_CITED_BY_SELECT,
+    sort: Optional[str] = None,
+    max_pages: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    short_id = to_short_openalex_id(work_id) or work_id
+    filters = [f"cites:{short_id}"]
+    if filter_expr:
+        filters.append(filter_expr)
+    params: Dict[str, Any] = {"filter": ",".join(filters)}
+    if select:
+        params["select"] = select
+    if sort:
+        params["sort"] = sort
+    per_page = min(MAX_PER_PAGE, max(1, int(per_page)))
+    results: List[Dict[str, Any]] = []
+    for item in client.iter_cursor("/works", params=params, per_page=per_page, max_pages=max_pages):
+        results.append(item)
+    return results
+
+
 def get_works_by_openalex_ids(
     work_ids: List[str],
     *,
@@ -78,4 +110,3 @@ def get_works_by_openalex_ids(
             if sid:
                 out[sid] = item
     return out
-

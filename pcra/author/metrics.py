@@ -90,15 +90,15 @@ def enrich_authors_with_metrics(
 
 def compute_max_h_index_author(authors: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     best: Optional[Dict[str, Any]] = None
-    best_h = None
+    best_h: Optional[int] = None
     for a in authors:
         h = a.get("h_index")
         if not isinstance(h, int):
-            continue
+            h = 0
         if best_h is None or h > best_h:
-            best_h = h
+            best_h = int(h)
             best = a
-    if best is None:
+    if best is None or best_h is None:
         return None
     return {
         "author_id": best.get("author_id"),

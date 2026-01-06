@@ -1,11 +1,16 @@
 """CLI: single paper end-to-end citation remark analysis (refactor pipeline).
 
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log  --target-author "Chengliang Chai"
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log  --target-author "Chengliang Chai"  --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]"   --pub-year-topk 3  --max-h-index-thershld 30
 
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "GoodCore: Data-effective and Data-efficient Machine Learning through Coreset Selection over Incomplete Data" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/res --log-dir trace_log/goodcore_data_effective_and_data_efficient_machine_learning_through_coreset_selection_over_incomplete_data/log  --target-author "Chengliang Chai"
-
-
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "Database Meets Artificial Intelligence: A Survey" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/database_meets_artificial_intelligence_a_survey/res --log-dir trace_log/database_meets_artificial_intelligence_a_survey/log  --target-author "Chengliang Chai"
+python pipeline_test/e2e_single_paper_citation_analysis.py \
+  --paper-to-analyze "Selective data acquisition in the wild for model charging" \
+  --llm-config-path config/llm_model.yaml \
+  --res-dir trace_log/14_Selective_data_acquisition_in_the_wild_for_model_charging/res \
+  --log-dir trace_log/14_Selective_data_acquisition_in_the_wild_for_model_charging/log \
+  --target-author "Chengliang Chai" \
+  --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]" \
+  --pub-year-topk 3 \
+  --max-h-index-thershld 30
 
 
 """
@@ -17,7 +22,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
@@ -35,6 +40,21 @@ def _maybe_int(value: Optional[str]) -> Optional[int]:
     return int(stripped)
 
 
+def _parse_ignore_authors(value: Optional[str]) -> List[str]:
+    if value is None:
+        return []
+    stripped = value.strip()
+    if not stripped:
+        return []
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError as exc:
+        raise ValueError("--ignore-authors expects a JSON list string.") from exc
+    if not isinstance(parsed, list):
+        raise ValueError("--ignore-authors expects a JSON list string.")
+    return [str(name) for name in parsed if str(name).strip()]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="E2E pipeline: single paper citation remark analysis.")
     parser.add_argument("--paper-to-analyze", required=True, help="Target paper title to analyze (query).")
@@ -43,6 +63,23 @@ def main() -> None:
     parser.add_argument("--res-dir", default="trace_log/v1_e2e_single_paper_run/res", help="Result output directory.")
     parser.add_argument("--log-dir", default="trace_log/v1_e2e_single_paper_run/log", help="Trace log output directory.")
     parser.add_argument("--cited-by-topk", type=int, default=10, help="Top-K cited-by works to keep.")
+    parser.add_argument(
+        "--pub-year-topk",
+        type=int,
+        default=5,
+        help="Recent K years window for dual recall.",
+    )
+    parser.add_argument(
+        "--ignore-authors",
+        default="[]",
+        help='JSON list of author names to ignore, e.g. ["Guoliang Li","Chengliang Chai"].',
+    )
+    parser.add_argument(
+        "--max-h-index-thershld",
+        type=int,
+        default=0,
+        help="Drop papers whose max h-index is below this threshold.",
+    )
     parser.add_argument(
         "--fellow-check-topk",
         type=int,
@@ -96,6 +133,9 @@ def main() -> None:
         res_dir=args.res_dir,
         log_dir=args.log_dir,
         cited_by_topK=args.cited_by_topk,
+        pub_year_topk=args.pub_year_topk,
+        ignore_authors=_parse_ignore_authors(args.ignore_authors),
+        max_h_index_thershld=args.max_h_index_thershld,
         fellow_check_topK=args.fellow_check_topk,
         fellow_web_search_topk=args.fellow_web_search_topk,
         roll_back_paper_topK=args.roll_back_paper_topk,

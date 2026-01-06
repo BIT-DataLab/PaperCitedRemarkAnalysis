@@ -12,7 +12,7 @@ def _max_h_index_value(candidate: Dict[str, Any]) -> int:
     h = author.get("h_index")
     if isinstance(h, int):
         return h
-    return -1
+    return 0
 
 
 def _sort_key(candidate: Dict[str, Any]) -> Tuple[int, int, int, str]:

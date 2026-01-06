@@ -94,6 +94,30 @@ class OpenAlexFacade:
         )
         return [self._dehydrate_work(x) for x in raw]
 
+    def work_cited_by_recent_years(
+        self,
+        paper_id: str,
+        *,
+        from_year: int,
+        to_year: Optional[int] = None,
+        fields: Optional[Union[str, List[str]]] = None,
+        sort: Optional[str] = None,
+        max_pages: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        if to_year is not None and to_year < from_year:
+            return []
+        select = join_fields(fields) or WORK_CITED_BY_SELECT
+        year_filter = f"publication_year:{from_year}-{to_year}" if to_year else f"publication_year:{from_year}-"
+        raw = works_api.list_citing_works_filtered(
+            paper_id,
+            client=self.client,
+            filter_expr=year_filter,
+            select=select,
+            sort=sort or "publication_year:desc",
+            max_pages=max_pages,
+        )
+        return [self._dehydrate_work(x) for x in raw]
+
     # ---------------------------- Author APIs ---------------------------- #
     def author_match_by_name(
         self,

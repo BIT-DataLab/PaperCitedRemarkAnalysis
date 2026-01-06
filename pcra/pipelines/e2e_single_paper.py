@@ -38,7 +38,7 @@ def _write_json(path: Path, payload: JsonDict) -> None:
 def _sorted_authors_by_h_index(authors: List[JsonDict]) -> List[JsonDict]:
     def sort_key(a: JsonDict) -> Tuple[int, str]:
         h = a.get("h_index")
-        h_val = h if isinstance(h, int) else -1
+        h_val = h if isinstance(h, int) else 0
         return (-h_val, str(a.get("name") or ""))
 
     return sorted(authors, key=sort_key)
@@ -47,7 +47,117 @@ def _sorted_authors_by_h_index(authors: List[JsonDict]) -> List[JsonDict]:
 def _normalize_author_name(value: Optional[str]) -> str:
     if not value:
         return ""
-    return " ".join(str(value).split()).strip().lower()
+    cleaned = str(value).strip().lower()
+    cleaned = cleaned.replace(",", " ").replace(".", " ")
+    return " ".join(cleaned.split())
+
+
+def _tag_recall_source(works: List[JsonDict], source: str) -> None:
+    for work in works:
+        sources = work.get("recall_sources") or []
+        if source not in sources:
+            sources.append(source)
+        work["recall_sources"] = sources
+
+
+def _merge_recalled_works(
+    top_cited: List[JsonDict],
+    recent_year: List[JsonDict],
+) -> Tuple[List[JsonDict], int]:
+    merged: List[JsonDict] = []
+    seen: Dict[str, JsonDict] = {}
+    duplicates = 0
+
+    for work in top_cited:
+        pid = work.get("paper_id")
+        if pid and pid in seen:
+            duplicates += 1
+            existing = seen[pid]
+            sources = existing.get("recall_sources") or []
+            for src in work.get("recall_sources") or []:
+                if src not in sources:
+                    sources.append(src)
+            existing["recall_sources"] = sources
+            continue
+        if pid:
+            seen[pid] = work
+        merged.append(work)
+
+    for work in recent_year:
+        pid = work.get("paper_id")
+        if pid and pid in seen:
+            duplicates += 1
+            existing = seen[pid]
+            sources = existing.get("recall_sources") or []
+            for src in work.get("recall_sources") or []:
+                if src not in sources:
+                    sources.append(src)
+            existing["recall_sources"] = sources
+            continue
+        if pid:
+            seen[pid] = work
+        merged.append(work)
+
+    return merged, duplicates
+
+
+def _normalize_ignore_authors(ignore_authors: Optional[List[str]]) -> List[str]:
+    normalized: List[str] = []
+    for name in ignore_authors or []:
+        norm = _normalize_author_name(name)
+        if norm and norm not in normalized:
+            normalized.append(norm)
+    return normalized
+
+
+def _apply_author_h_index_defaults(works: List[JsonDict]) -> None:
+    for work in works:
+        for author in work.get("authors") or []:
+            if not isinstance(author.get("h_index"), int):
+                author["h_index"] = 0
+
+
+def _filter_by_ignore_authors(
+    works: List[JsonDict], ignore_authors_norm: List[str]
+) -> Tuple[List[JsonDict], List[JsonDict]]:
+    if not ignore_authors_norm:
+        return works, []
+    ignore_set = set(ignore_authors_norm)
+    kept: List[JsonDict] = []
+    dropped: List[JsonDict] = []
+    for work in works:
+        matched = []
+        for author in work.get("authors") or []:
+            name_norm = _normalize_author_name(author.get("name"))
+            if name_norm and name_norm in ignore_set:
+                matched.append(author.get("name") or name_norm)
+        if matched:
+            work["filter_reason"] = "ignore_authors"
+            work["filter_meta"] = {"matched_authors": matched}
+            dropped.append(work)
+        else:
+            kept.append(work)
+    return kept, dropped
+
+
+def _filter_by_max_h_index(
+    works: List[JsonDict], max_h_index_thershld: int
+) -> Tuple[List[JsonDict], List[JsonDict]]:
+    kept: List[JsonDict] = []
+    dropped: List[JsonDict] = []
+    for work in works:
+        ensure_max_h_index_author(work)
+        max_author = work.get("max_h_index_author") or {}
+        h_index = max_author.get("h_index")
+        if not isinstance(h_index, int):
+            h_index = 0
+        if h_index < max_h_index_thershld:
+            work["filter_reason"] = "max_h_index_thershld"
+            work["filter_meta"] = {"max_h_index": h_index, "threshold": max_h_index_thershld}
+            dropped.append(work)
+        else:
+            kept.append(work)
+    return kept, dropped
 
 
 def _is_self_citation(target_author: Optional[str], authors: List[JsonDict]) -> Optional[bool]:
@@ -142,6 +252,9 @@ def run_e2e_single_paper(
     res_dir: PathLike = "log/e2e_single_paper_run",
     log_dir: PathLike = "log/trace",
     cited_by_topK: int = 30,
+    pub_year_topk: int = 5,
+    ignore_authors: Optional[List[str]] = None,
+    max_h_index_thershld: int = 0,
     fellow_check_topK: int = 5,
     fellow_web_search_topk: int = 5,
     roll_back_paper_topK: int = 10,
@@ -171,6 +284,10 @@ def run_e2e_single_paper(
 
     if cited_by_topK <= 0:
         raise ValueError(f"cited_by_topK must be > 0, got: {cited_by_topK}")
+    if pub_year_topk < 0:
+        raise ValueError(f"pub_year_topk must be >= 0, got: {pub_year_topk}")
+    if max_h_index_thershld < 0:
+        raise ValueError(f"max_h_index_thershld must be >= 0, got: {max_h_index_thershld}")
     if fellow_check_topK < 0:
         raise ValueError(f"fellow_check_topK must be >= 0, got: {fellow_check_topK}")
     if roll_back_paper_topK < 0:
@@ -180,8 +297,13 @@ def run_e2e_single_paper(
     if max_pages <= 0:
         raise ValueError(f"max_pages must be > 0, got: {max_pages}")
 
+    ignore_authors = [str(x) for x in (ignore_authors or []) if str(x).strip()]
+
     params_snapshot = {
         "cited_by_topK": cited_by_topK,
+        "pub_year_topk": pub_year_topk,
+        "ignore_authors": ignore_authors or [],
+        "max_h_index_thershld": max_h_index_thershld,
         "fellow_check_topK": fellow_check_topK,
         "fellow_web_search_topk": fellow_web_search_topk,
         "roll_back_paper_topK": roll_back_paper_topK,
@@ -259,17 +381,39 @@ def run_e2e_single_paper(
         },
     )
 
-    cited_by = openalex_facade.work_cited_by(
+    cited_by_top = openalex_facade.work_cited_by(
         match["paper_id"],
         top_k=cited_by_topK,
     )
+    _tag_recall_source(cited_by_top, "top_cited")
+
+    current_year = datetime.now(timezone.utc).year
+    cutoff_year = None
+    cited_by_recent: List[JsonDict] = []
+    if pub_year_topk > 0:
+        cutoff_year = current_year - pub_year_topk + 1
+        cited_by_recent = openalex_facade.work_cited_by_recent_years(
+            match["paper_id"],
+            from_year=cutoff_year,
+            to_year=current_year,
+        )
+        _tag_recall_source(cited_by_recent, "recent_year")
+
+    cited_by, duplicates_dropped = _merge_recalled_works(cited_by_top, cited_by_recent)
     cited_by_raw_count = len(cited_by)
 
     trace.write(
         "T3",
         core={"paper_id": match.get("paper_id"), "cited_by": cited_by},
-        params={"cited_by_topK": cited_by_topK},
-        meta={"cited_by_count": len(cited_by)},
+        params={"cited_by_topK": cited_by_topK, "pub_year_topk": pub_year_topk},
+        meta={
+            "top_cited_count": len(cited_by_top),
+            "recent_year_count": len(cited_by_recent),
+            "deduped_count": len(cited_by),
+            "duplicates_dropped": duplicates_dropped,
+            "cutoff_year": cutoff_year,
+            "current_year": current_year,
+        },
     )
 
     published: List[JsonDict] = []
@@ -314,16 +458,37 @@ def run_e2e_single_paper(
         },
     )
 
+    ignore_authors_norm = _normalize_ignore_authors(ignore_authors)
+    cited_by, ignored_dropped = _filter_by_ignore_authors(cited_by, ignore_authors_norm)
+
     enrich_authors_with_metrics(
         cited_by,
         client=openalex_client,
         max_authors=max_author_lookups,
     )
+    _apply_author_h_index_defaults(cited_by)
 
     trace.write(
         "T4a",
         core={"cited_by_enriched": cited_by},
         params={"max_author_lookups": max_author_lookups},
+    )
+
+    cited_by, h_index_dropped = _filter_by_max_h_index(cited_by, max_h_index_thershld)
+    filtered_out = ignored_dropped + h_index_dropped
+    trace.write(
+        "T4b_pre",
+        core={"cited_by_filtered": cited_by, "cited_by_dropped": filtered_out},
+        params={
+            "ignore_authors": ignore_authors or [],
+            "max_h_index_thershld": max_h_index_thershld,
+        },
+        meta={
+            "ignore_authors_dropped": len(ignored_dropped),
+            "max_h_index_dropped": len(h_index_dropped),
+            "filtered_total": len(filtered_out),
+            "remaining_count": len(cited_by),
+        },
     )
 
     cache_path = run_ctx.dirs["cache_dir"] / "fellow_lookup.json"
@@ -533,6 +698,8 @@ def run_e2e_single_paper(
                 "cited_by_count": work.get("cited_by_count"),
                 "venue": venue,
                 "publication_status": work.get("publication_status"),
+                "recall_sources": work.get("recall_sources"),
+                "filter_reason": work.get("filter_reason"),
                 "topk_authors": work.get("topk_authors"),
                 "has_fellow_topk": work.get("has_fellow_topk"),
                 "selection_reason": work.get("selection_reason"),
