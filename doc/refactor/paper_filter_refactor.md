@@ -13,6 +13,12 @@
 - `max_h_index_thershld` spelling stays as-is.
 - Missing `h_index` values are treated as `0`.
 - No extra cap after dual recall; keep all works after DBLP + filters.
+- OpenAlex supports filtering by `publication_year` / `from_publication_date` and sorting by `publication_year:desc` / `publication_date:desc`; these can be combined with `filter=cites:W...` so recent-year recall does not require pulling all citing works locally (but may still need paging to exhaust the window).
+
+demo:
+```
+GET /works?filter=cites:W2741809807,publication_year:2020-2024&sort=publication_year:desc
+```
 
 ## Plan
 ### 1) Parameter surface and wiring
