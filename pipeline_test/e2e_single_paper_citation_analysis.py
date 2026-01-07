@@ -10,7 +10,9 @@ python pipeline_test/e2e_single_paper_citation_analysis.py \
   --target-author "Chengliang Chai" \
   --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]" \
   --pub-year-topk 3 \
-  --max-h-index-thershld 30
+  --max-h-index-thershld 30 \
+  --cited-by-topk 20 \
+  --roll-back-paper-topk 5
 
 
 """
@@ -62,7 +64,7 @@ def main() -> None:
     parser.add_argument("--llm-config-path", default=None, help="Path to LLM YAML config.")
     parser.add_argument("--res-dir", default="trace_log/v1_e2e_single_paper_run/res", help="Result output directory.")
     parser.add_argument("--log-dir", default="trace_log/v1_e2e_single_paper_run/log", help="Trace log output directory.")
-    parser.add_argument("--cited-by-topk", type=int, default=10, help="Top-K cited-by works to keep.")
+    parser.add_argument("--cited-by-topk", type=int, default=20, help="Top-K cited-by works to keep.")
     parser.add_argument(
         "--pub-year-topk",
         type=int,
