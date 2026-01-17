@@ -160,6 +160,69 @@ def _filter_by_max_h_index(
     return kept, dropped
 
 
+def _is_recent_only_work(work: JsonDict) -> bool:
+    sources = work.get("recall_sources") or []
+    return "recent_year" in sources and "top_cited" not in sources
+
+
+def _recent_year_sort_key(work: JsonDict) -> Tuple[int, int, int, str]:
+    max_author = work.get("max_h_index_author") or {}
+    h_index = max_author.get("h_index")
+    h_val = h_index if isinstance(h_index, int) else 0
+    cited_by_count = work.get("cited_by_count") or 0
+    year = work.get("year") or 0
+    title = work.get("paper_title") or ""
+    return (-h_val, -int(cited_by_count), -int(year), str(title))
+
+
+def _work_key(work: JsonDict) -> Tuple[str, Union[int, str]]:
+    paper_id = work.get("paper_id")
+    if paper_id:
+        return ("paper_id", str(paper_id))
+    return ("obj", id(work))
+
+
+def _cap_recent_year_by_max_h_index(
+    works: List[JsonDict],
+    *,
+    max_papers: Optional[int],
+) -> Tuple[List[JsonDict], List[JsonDict], int]:
+    if max_papers is None:
+        return works, [], 0
+    max_papers = int(max_papers)
+    if max_papers <= 0:
+        return works, [], 0
+
+    recent_only = [w for w in works if _is_recent_only_work(w)]
+    recent_only_count = len(recent_only)
+    if recent_only_count <= max_papers:
+        return works, [], recent_only_count
+
+    for work in recent_only:
+        ensure_max_h_index_author(work)
+
+    ranked = sorted(recent_only, key=_recent_year_sort_key)
+    kept_recent = ranked[:max_papers]
+    kept_keys = {_work_key(w) for w in kept_recent}
+
+    kept: List[JsonDict] = []
+    dropped: List[JsonDict] = []
+    for work in works:
+        if not _is_recent_only_work(work):
+            kept.append(work)
+            continue
+        if _work_key(work) in kept_keys:
+            kept.append(work)
+            continue
+        work["filter_reason"] = "recent_year_cap"
+        work["filter_meta"] = {
+            "recent_year_max_papers": max_papers,
+            "max_h_index": (work.get("max_h_index_author") or {}).get("h_index") or 0,
+        }
+        dropped.append(work)
+    return kept, dropped, recent_only_count
+
+
 def _is_self_citation(target_author: Optional[str], authors: List[JsonDict]) -> Optional[bool]:
     if not target_author or not str(target_author).strip():
         return None
@@ -253,6 +316,7 @@ def run_e2e_single_paper(
     log_dir: PathLike = "log/trace",
     cited_by_topK: int = 30,
     pub_year_topk: int = 5,
+    pub_year_max_papers: Optional[int] = 15,
     ignore_authors: Optional[List[str]] = None,
     max_h_index_thershld: int = 0,
     fellow_check_topK: int = 5,
@@ -286,6 +350,10 @@ def run_e2e_single_paper(
         raise ValueError(f"cited_by_topK must be > 0, got: {cited_by_topK}")
     if pub_year_topk < 0:
         raise ValueError(f"pub_year_topk must be >= 0, got: {pub_year_topk}")
+    if pub_year_max_papers is not None and pub_year_max_papers < 0:
+        raise ValueError(
+            f"pub_year_max_papers must be >= 0 when set, got: {pub_year_max_papers}"
+        )
     if max_h_index_thershld < 0:
         raise ValueError(f"max_h_index_thershld must be >= 0, got: {max_h_index_thershld}")
     if fellow_check_topK < 0:
@@ -302,6 +370,7 @@ def run_e2e_single_paper(
     params_snapshot = {
         "cited_by_topK": cited_by_topK,
         "pub_year_topk": pub_year_topk,
+        "pub_year_max_papers": pub_year_max_papers,
         "ignore_authors": ignore_authors or [],
         "max_h_index_thershld": max_h_index_thershld,
         "fellow_check_topK": fellow_check_topK,
@@ -405,7 +474,11 @@ def run_e2e_single_paper(
     trace.write(
         "T3",
         core={"paper_id": match.get("paper_id"), "cited_by": cited_by},
-        params={"cited_by_topK": cited_by_topK, "pub_year_topk": pub_year_topk},
+        params={
+            "cited_by_topK": cited_by_topK,
+            "pub_year_topk": pub_year_topk,
+            "pub_year_max_papers": pub_year_max_papers,
+        },
         meta={
             "top_cited_count": len(cited_by_top),
             "recent_year_count": len(cited_by_recent),
@@ -475,17 +548,24 @@ def run_e2e_single_paper(
     )
 
     cited_by, h_index_dropped = _filter_by_max_h_index(cited_by, max_h_index_thershld)
-    filtered_out = ignored_dropped + h_index_dropped
+    cited_by, recent_year_dropped, recent_year_total = _cap_recent_year_by_max_h_index(
+        cited_by,
+        max_papers=pub_year_max_papers,
+    )
+    filtered_out = ignored_dropped + h_index_dropped + recent_year_dropped
     trace.write(
         "T4b_pre",
         core={"cited_by_filtered": cited_by, "cited_by_dropped": filtered_out},
         params={
             "ignore_authors": ignore_authors or [],
             "max_h_index_thershld": max_h_index_thershld,
+            "pub_year_max_papers": pub_year_max_papers,
         },
         meta={
             "ignore_authors_dropped": len(ignored_dropped),
             "max_h_index_dropped": len(h_index_dropped),
+            "recent_year_only_total": recent_year_total,
+            "recent_year_cap_dropped": len(recent_year_dropped),
             "filtered_total": len(filtered_out),
             "remaining_count": len(cited_by),
         },

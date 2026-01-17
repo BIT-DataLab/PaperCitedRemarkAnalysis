@@ -1,6 +1,6 @@
 """CLI: single paper end-to-end citation remark analysis (refactor pipeline).
 
-python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log  --target-author "Chengliang Chai"  --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]"   --pub-year-topk 3  --max-h-index-thershld 30
+python  pipeline_test/e2e_single_paper_citation_analysis.py --paper-to-analyze "CrowdChart: Crowdsourced Data Extraction from Visualization Charts" --llm-config-path  config/llm_model.yaml  --res-dir   trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/res --log-dir trace_log/CrowdChart_Crowdsourced_Data_Extraction_from_Visualization_Charts/log  --target-author "Chengliang Chai"  --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]"   --pub-year-topk 3  --pub-year-max-papers 15  --max-h-index-thershld 30
 
 python pipeline_test/e2e_single_paper_citation_analysis.py \
   --paper-to-analyze "Selective data acquisition in the wild for model charging" \
@@ -10,6 +10,7 @@ python pipeline_test/e2e_single_paper_citation_analysis.py \
   --target-author "Chengliang Chai" \
   --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]" \
   --pub-year-topk 3 \
+  --pub-year-max-papers 15 \
   --max-h-index-thershld 30 \
   --cited-by-topk 20 \
   --roll-back-paper-topk 5
@@ -70,6 +71,12 @@ def main() -> None:
         type=int,
         default=5,
         help="Recent K years window for dual recall.",
+    )
+    parser.add_argument(
+        "--pub-year-max-papers",
+        type=int,
+        default=15,
+        help="Max papers kept from recent-year recall (<=0 disables cap).",
     )
     parser.add_argument(
         "--ignore-authors",
@@ -136,6 +143,7 @@ def main() -> None:
         log_dir=args.log_dir,
         cited_by_topK=args.cited_by_topk,
         pub_year_topk=args.pub_year_topk,
+        pub_year_max_papers=args.pub_year_max_papers,
         ignore_authors=_parse_ignore_authors(args.ignore_authors),
         max_h_index_thershld=args.max_h_index_thershld,
         fellow_check_topK=args.fellow_check_topk,
