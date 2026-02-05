@@ -1,0 +1,32 @@
+# copy this file as: llm_model.yaml in the same directory and fill in your api key.
+
+text:
+  # use openrouter api
+  # model: "x-ai/grok-4.1-fast"
+  # api_base: "https://openrouter.ai/api/v1"
+  # api_key: "xxxx"
+  # api_key_env: "xxx
+
+  # use ollama api
+  model: "nemotron-3-nano:30b"
+  api_base: "http://localhost:11434/v1"
+  api_key: "ollama"
+  api_key_env: "ollama"
+
+  # use aihubmix api
+  # model: "gpt-4.1-mini"
+  # api_base: "https://aihubmix.com/v1"
+  # api_key: "xxxx"
+
+# currently web search depend on openrouter api
+# in the v2 edition we will add a search agent for title verfication and enable local llm api or other api providers.
+openrouter_web_search:
+
+  model: "x-ai/grok-4.1-fast"
+  api_base: "https://openrouter.ai/api/v1"
+  api_key: "xxxxx"
+  api_key_env: "xxxxx"
+  web_search_mode: "plugins"
+  max_results: 5
+  timeout_s: 60
+

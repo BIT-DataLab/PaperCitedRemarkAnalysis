@@ -18,3 +18,4 @@ trace_log/
 dataset/
 
 ref_code/local_llm_author_title_query/
+!config/llm_model_template.yaml
