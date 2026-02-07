@@ -4,6 +4,33 @@
 conda create -n py310 python=3.10
 pip install -r requirements.txt
 
+# Chrome / Chromedriver 安装（Selenium）
+
+`pcra.get_pdf` 需要 Chrome 与 chromedriver 二进制文件，路径固定在仓库根目录下：
+- `chrome_bin/chrome-linux64/chrome`
+- `chrome_bin/chromedriver-linux64/chromedriver`
+
+这两个文件来自 **Chrome for Testing** 官方发行包。请下载相同版本的
+`chrome-linux64.zip` 与 `chromedriver-linux64.zip` 并解压到 `chrome_bin/`。
+官网地址：https://googlechromelabs.github.io/chrome-for-testing/
+
+示例（可替换版本号）：
+```
+VER=143.0.7499.40
+${VER}
+mkdir -p chrome_bin
+wget -O /tmp/chrome-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/${VER}/linux64/chrome-linux64.zip"
+wget -O /tmp/chromedriver-linux64.zip "https://storage.googleapis.com/chrome-for-testing-public/${VER}/linux64/chromedriver-linux64.zip"
+unzip -q /tmp/chrome-linux64.zip -d chrome_bin
+unzip -q /tmp/chromedriver-linux64.zip -d chrome_bin
+```
+
+验证版本：
+```
+chrome_bin/chrome-linux64/chrome --version
+chrome_bin/chromedriver-linux64/chromedriver --version
+```
+
 # minerU环境安装和服务启动
 (需要5GB的GPU显存)
 
