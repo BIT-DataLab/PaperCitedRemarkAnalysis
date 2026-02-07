@@ -5,6 +5,8 @@ Given a target paper title, the system pulls citing papers, filters for publishe
 checks Fellow status for top authors, extracts citation contexts from PDFs, scores each
 context with an LLM, and outputs reports plus trace logs for reproducibility.
 
+![whole architecture](doc/images/whole_architecture.png)
+
 ## Table of Contents
 
 - Overview
@@ -43,6 +45,8 @@ reports and trace logs.
 7. Candidate paper selection and fallback strategy (max h-index)
 8. PDF download, full-text extraction, citation-context extraction
 9. LLM scoring and report output (per-paper report + summary report)
+
+![overall_workflow](doc/images/overall_workflow.png)
 
 ## Requirements
 
