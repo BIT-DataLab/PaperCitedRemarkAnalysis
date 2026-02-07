@@ -5,7 +5,7 @@ text:
   # model: "x-ai/grok-4.1-fast"
   # api_base: "https://openrouter.ai/api/v1"
   # api_key: "xxxx"
-  # api_key_env: "xxx
+  # api_key_env: "xxx"
 
   # use ollama api
   model: "nemotron-3-nano:30b"

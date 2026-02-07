@@ -53,9 +53,9 @@ python pipeline_test/e2e_single_paper_citation_analysis.py \
   --dry-run
 ```
 
-## Key Outputs
+## 单篇论文输出结果和日志
 
-Under `--res-dir`:
+Under `trace_log/<target_paper_name>/res`:
 
 - `paper_ref_contexts/{paper_id}.json` (PDF/fulltext/ref_ctx)
 - `paper_ref_contexts_scored/{paper_id}.json` (LLM scores)
@@ -65,21 +65,8 @@ Under `--res-dir`:
 - `reports/summary.md`
 - `summary.json`
 
-Under `--log-dir`:
+Under `trace_log/<target_paper_name>/log`:
 
 - `{run_id}.ndjson` (stage trace logs)
 
-## Configuration Notes
 
-- OpenAlex: uses `OPENALEX_MAILTO` and `OPENALEX_USER_AGENT` env vars (optional).
-- LLM scoring: `config/llm_model.yaml` or env overrides:
-  `PCRA_LLM_MODEL`, `PCRA_LLM_BASE_URL`, `PCRA_LLM_API_KEY`, etc.
-- Fellow lookup: OpenRouter web search settings in the same config
-  (`openrouter_web_search` section) or `OPENROUTER_API_KEY`.
-- PDF search: DuckDuckGo + Selenium. Chrome/Chromedriver are expected at
-  `chrome_bin/chrome-linux64/chrome` and `chrome_bin/chromedriver-linux64/chromedriver`.
-
-## Docs
-
-Detailed requirement/design notes live under `doc/` (non-English filenames).
-The implementation aligns with the refactored pipeline in `pcra/pipelines/e2e_single_paper.py`.
