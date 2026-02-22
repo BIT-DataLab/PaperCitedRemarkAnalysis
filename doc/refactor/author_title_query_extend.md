@@ -1,7 +1,16 @@
 
-# T6 TopK 作者 Fellow 校验（IEEE/ACM/AAAI） 功能扩展
+# 需求-T6 TopK 作者 Fellow 校验（IEEE/ACM/AAAI） 功能扩展
 - 扩展程序的逻辑，让它可以不依赖于openrouter-api (可用本地的llm-api，需要从学者主页截取包含作者头衔介绍的文本)
 当前程序流程在分析单篇论文时，学者头衔校验阶段（找大佬阶段）依赖openrouter-api把学者主页检索+头衔校验一条龙解决，但这个操作依赖openrouter的搜索api,比较昂贵，目前服务器上已经有本地部署的ollama大模型了，我希望能对这个阶段做一些修改，让程序使用Selenium 从duckduckgo上检索学者个人主页，然后获取对应的html，将html中的可读部分的文字转化成markdown格式并截取前阈值个字符(截取到本地LLM输入阈值范围之内)，让本地llm去判断该学者的头衔。
+
+目前config中对引文评价的打分已经用本地llm进行了，可以参考使用相同的api调用方式：
+```
+config/llm_model.yaml 中的ollama-api  部分
+
+```
+
+# 可用python环境
+/shared_data/miniconda3/envs/pcraPaper/bin/python
 
 
 # ✅ 学者主页正文抽取执行计划生成
