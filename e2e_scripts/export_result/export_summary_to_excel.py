@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
+AGG_FIELD_SEPARATOR = " [SEP] "
+
 SHEET1_COLUMNS = [
     "target_paper_title",
     "target_paper_id",
@@ -103,8 +105,13 @@ def format_citing_paper_agg(citing):
     venue = safe_str(citing.get("venue", ""))
     has_fellow = bool(citing.get("has_fellow_topk", False))
     topk_authors = format_topk_authors(citing.get("topk_authors"), include_affiliation=False)
-    return (
-        f"{title} | venue={venue} | fellow={has_fellow} | topk_authors=[{topk_authors}]"
+    return AGG_FIELD_SEPARATOR.join(
+        [
+            title,
+            f"venue={venue}",
+            f"fellow={has_fellow}",
+            f"topk_authors=[{topk_authors}]",
+        ]
     )
 
 

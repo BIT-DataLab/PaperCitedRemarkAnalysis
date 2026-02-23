@@ -35,7 +35,8 @@
    * **聚合字段 1：所有 citing papers + 其 topk_authors 信息**
    * 建议格式（单字段可读）：
 
-     * `"{paper_title} | venue={venue} | fellow={has_fellow_topk} | topk_authors=[Name(h_index=, ieee=, acm=, aaai=); ...]"`
+     * `"{paper_title} [SEP] venue={venue} [SEP] fellow={has_fellow_topk} [SEP] topk_authors=[Name(h_index=, ieee=, acm=, aaai=); ...]"`
+   * 说明：`[SEP]` 是字段分隔符，避免在 Markdown 表格中使用 `|` 导致列解析错误。
 
 10. **citing_papers_fellow_agg** (str)
 
@@ -92,4 +93,3 @@
 
 * Sheet1：按 target paper 聚合 citing papers（拼两列 agg 字符串）；
 * Sheet2：展开 contexts；若 contexts 为空，为该 citing paper 造 1 条占位行（`context_text="None"`）。
-
