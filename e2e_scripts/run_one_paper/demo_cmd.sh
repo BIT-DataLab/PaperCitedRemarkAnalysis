@@ -1,0 +1,11 @@
+python pipeline_test/e2e_single_paper_citation_analysis.py \
+  --paper-to-analyze "Selective data acquisition in the wild for model charging" \
+  --llm-config-path config/llm_model.yaml \
+  --res-dir trace_log/14_Selective_data_acquisition_in_the_wild_for_model_charging/res \
+  --log-dir trace_log/14_Selective_data_acquisition_in_the_wild_for_model_charging/log \
+  --target-author "Chengliang Chai" \
+  --ignore-authors "[\"Guoliang Li\",\"Chengliang Chai\"]" \
+  --pub-year-topk 3 \
+  --max-h-index-thershld 30 \
+  --cited-by-topk 20 \
+  --roll-back-paper-topk 5
