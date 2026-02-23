@@ -99,7 +99,7 @@ def main() -> None:
         "--fellow-web-search-topk",
         type=int,
         default=3,
-        help="Max web search results per Fellow lookup.",
+        help="Max candidate homepage URLs processed per Fellow lookup.",
     )
     parser.add_argument(
         "--roll-back-paper-topk",

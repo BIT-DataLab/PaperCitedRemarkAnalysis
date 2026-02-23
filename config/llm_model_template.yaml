@@ -18,8 +18,23 @@ text:
   # api_base: "https://aihubmix.com/v1"
   # api_key: "xxxx"
 
-# currently web search depend on openrouter api
-# in the v2 edition we will add a search agent for title verfication and enable local llm api or other api providers.
+# fellow lookup mode:
+# - local_only: DuckDuckGo + Selenium + local text LLM (default, no OpenRouter required)
+# - local_with_fallback: local flow first, fallback to OpenRouter when all Unknown or local errors
+# - openrouter_only: keep legacy OpenRouter web-search flow
+fellow_lookup:
+  mode: "local_only"
+  allow_wikipedia: true
+  max_results: 5
+  profile_char_limit: 8000
+  min_profile_chars: 200
+  extract_markdown_mode: "auto" # auto | trafilatura_html | trafilatura_txt | bs4_body | keyword_window
+  debug_markdown_max_chars: 20000
+  rule_assisted_honor_detection: true
+
+# OpenRouter settings are only required when:
+# - fellow_lookup.mode = local_with_fallback
+# - fellow_lookup.mode = openrouter_only
 openrouter_web_search:
 
   model: "x-ai/grok-4.1-fast"
@@ -29,4 +44,3 @@ openrouter_web_search:
   web_search_mode: "plugins"
   max_results: 5
   timeout_s: 60
-

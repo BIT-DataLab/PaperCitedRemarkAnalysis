@@ -128,9 +128,13 @@ Find the config template `config/llm_model_template.yaml`:
 cp config/llm_model_template.yaml config/llm_model.yaml
 ```
 
-Fill in your OpenRouter API Key. Keep `api_key_env` and `api_key` consistent.
-The `openrouter_web_search` field must use an OpenRouter model; the `text` field
-can use any OpenAI-compatible model.
+Fill in the `text` model settings first (can be local Ollama or any OpenAI-compatible API).
+Fellow lookup mode is configured by `fellow_lookup.mode`:
+- `local_only` (default): DuckDuckGo + Selenium + local `text` model, no OpenRouter required.
+- `local_with_fallback`: local flow first, fallback to OpenRouter when all results are `Unknown` or local errors occur.
+- `openrouter_only`: legacy OpenRouter web-search flow only.
+
+`openrouter_web_search` is only required when mode is `local_with_fallback` or `openrouter_only`.
 
 ## Quick Start
 

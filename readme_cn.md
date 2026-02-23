@@ -118,8 +118,13 @@ mineru-api --host 0.0.0.0 --port 18543
 cp config/llm_model_template.yaml config/llm_model.yaml
 ```
 
-填写你的 OpenRouter API Key。`api_key_env` 和 `api_key` 的值保持一致即可。
-`openrouter_web_search` 字段必须使用 OpenRouter 模型，`text` 字段可以使用其他与 OpenAI 接口兼容的模型。
+优先填写 `text` 模型配置（可用本地 Ollama 或其他 OpenAI 兼容接口）。
+Fellow 校验由 `fellow_lookup.mode` 控制：
+- `local_only`（默认）：DuckDuckGo + Selenium + 本地 `text` 模型，不依赖 OpenRouter。
+- `local_with_fallback`：先走本地流程，当结果全为 `Unknown` 或本地技术失败时回退 OpenRouter。
+- `openrouter_only`：仅使用历史 OpenRouter 联网流程。
+
+只有在 `local_with_fallback` 或 `openrouter_only` 模式下，才需要配置 `openrouter_web_search`。
 
 ## 快速开始
 
