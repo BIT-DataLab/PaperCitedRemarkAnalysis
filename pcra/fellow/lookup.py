@@ -142,6 +142,7 @@ PROFILE_TITLE_HINTS = (
 )
 
 EXTRACT_MODES = {"auto", "trafilatura_html", "trafilatura_txt", "bs4_body", "keyword_window"}
+DEFAULT_EXTRACT_MARKDOWN_MODE = "bs4_body"
 
 RULE_POSITIVE_PATTERNS: Tuple[Tuple[re.Pattern[str], Tuple[str, ...], str], ...] = (
     (re.compile(r"\bacm\s*/\s*ieee\s*fellow(?:s)?\b", re.IGNORECASE), ("ACM Fellow", "IEEE Fellow"), "slash"),
@@ -598,7 +599,9 @@ def _make_cache_key(
         "max_results": int(cache_settings.get("max_results") or 0),
         "allow_wikipedia": bool(cache_settings.get("allow_wikipedia")),
         "profile_char_limit": int(cache_settings.get("profile_char_limit") or 0),
-        "extract_markdown_mode": str(cache_settings.get("extract_markdown_mode") or "auto"),
+        "extract_markdown_mode": str(
+            cache_settings.get("extract_markdown_mode") or DEFAULT_EXTRACT_MARKDOWN_MODE
+        ),
         "rule_assisted_honor_detection": bool(cache_settings.get("rule_assisted_honor_detection")),
         "local_model": str(cache_settings.get("local_model") or ""),
         "openrouter_model": str(cache_settings.get("openrouter_model") or ""),
@@ -730,9 +733,11 @@ def _read_fellow_lookup_settings(
     min_profile_chars = _coerce_int(section.get("min_profile_chars"), default=200)
     dynamic_wait_s = _coerce_int(section.get("dynamic_wait_s"), default=8)
     debug_markdown_max_chars = _coerce_int(section.get("debug_markdown_max_chars"), default=20000)
-    extract_markdown_mode = str(section.get("extract_markdown_mode") or "auto").strip().lower()
+    extract_markdown_mode = str(
+        section.get("extract_markdown_mode") or DEFAULT_EXTRACT_MARKDOWN_MODE
+    ).strip().lower()
     if extract_markdown_mode not in EXTRACT_MODES:
-        extract_markdown_mode = "auto"
+        extract_markdown_mode = DEFAULT_EXTRACT_MARKDOWN_MODE
 
     return {
         "mode": mode,
@@ -1715,7 +1720,10 @@ def _lookup_via_local_web_and_llm(
                         affiliation=affiliation,
                         paper_institutions=paper_institutions,
                         char_limit=int(fellow_settings["profile_char_limit"]),
-                        mode=str(fellow_settings.get("extract_markdown_mode") or "auto"),
+                        mode=str(
+                            fellow_settings.get("extract_markdown_mode")
+                            or DEFAULT_EXTRACT_MARKDOWN_MODE
+                        ),
                     )
                     static_markdown, selected_strategy, selected_reason = _select_best_markdown_attempt(
                         static_attempts
@@ -1889,7 +1897,10 @@ def _lookup_via_local_web_and_llm(
                     affiliation=affiliation,
                     paper_institutions=paper_institutions,
                     char_limit=int(fellow_settings["profile_char_limit"]),
-                    mode=str(fellow_settings.get("extract_markdown_mode") or "auto"),
+                    mode=str(
+                        fellow_settings.get("extract_markdown_mode")
+                        or DEFAULT_EXTRACT_MARKDOWN_MODE
+                    ),
                 )
                 dynamic_markdown, selected_strategy, selected_reason = _select_best_markdown_attempt(
                     dynamic_attempts

@@ -28,7 +28,7 @@ fellow_lookup:
   max_results: 5
   profile_char_limit: 8000
   min_profile_chars: 200
-  extract_markdown_mode: "auto" # auto | trafilatura_html | trafilatura_txt | bs4_body | keyword_window
+  extract_markdown_mode: "bs4_body" # default single-strategy mode for faster fellow lookup; set auto to enable multi-strategy
   debug_markdown_max_chars: 20000
   rule_assisted_honor_detection: true
 
