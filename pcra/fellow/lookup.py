@@ -171,6 +171,27 @@ EXTRACTION_HINT_KEYWORDS = (
     "research interests",
 )
 
+_MOJIBAKE_PAIR_RE = re.compile(
+    r"[ÃÂâãïåæçéèêëìíîðñòóôõöùúûüýþÿ][\u0080-\u00ff]"
+)
+_MOJIBAKE_BLOCK_RE = re.compile(
+    r"(?:[ÃÂâãïåæçéèêëìíîðñòóôõöùúûüýþÿ][\u0080-\u00ff]){3,}"
+)
+_META_CHARSET_RE = re.compile(
+    rb"<meta[^>]+charset=[\"']?\s*([a-zA-Z0-9._:-]+)",
+    re.IGNORECASE,
+)
+_META_HTTP_EQUIV_CHARSET_RE = re.compile(
+    rb"<meta[^>]+http-equiv=[\"']content-type[\"'][^>]*content=[\"'][^\"'>]*charset=([a-zA-Z0-9._:-]+)",
+    re.IGNORECASE,
+)
+_COMMON_CJK_CHARS = set(
+    "的一是在不了人有我他这中大来上个国们到说为子和你地出道也时年得就那要下以生会自着去之过家学对可里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分将外名法间高使实定进着等力与其把由因给但最它又或被并此向前后新线内正反应关很情意问题建月点提直程展五果料象员革位入常总次品式活设及管特件长求老基资边流路级少图山统接知较组见计别期根论运农指九区强放决西回任取据处理世府车白整北传保术县己队影东省市区路号济南高新软件学院教授博士导师访问信息姓名单位职位地址男"
+)
+_SUSPECT_UTF8_AS_GBK_CJK_CHARS = set(
+    "涓鍥鍙鍚鍦鍐鍒鍔鍛鍜鍝鍞鍟鍠鎴鎵鏂鏃鏄鏉鏋鏍鐪鐨鐢鐧閮闂闆闈娆灞宸岃祹楂垳笢佹"
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -258,10 +279,253 @@ def _normalize_text(value: Optional[str]) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
+def _count_mojibake_pairs(text: str) -> int:
+    if not text:
+        return 0
+    return len(_MOJIBAKE_PAIR_RE.findall(text))
+
+
+def _extract_cjk_chars(text: str) -> List[str]:
+    if not text:
+        return []
+    return re.findall(r"[\u3400-\u9fff]", text)
+
+
+def _common_cjk_ratio(cjk_chars: Sequence[str]) -> float:
+    if not cjk_chars:
+        return 0.0
+    hits = sum(ch in _COMMON_CJK_CHARS for ch in cjk_chars)
+    return hits / len(cjk_chars)
+
+
+def _suspect_utf8_as_gbk_hits(cjk_chars: Sequence[str]) -> int:
+    if not cjk_chars:
+        return 0
+    return sum(ch in _SUSPECT_UTF8_AS_GBK_CJK_CHARS for ch in cjk_chars)
+
+
+def _looks_like_utf8_as_gbk_mojibake(text: str) -> bool:
+    cjk_chars = _extract_cjk_chars(text)
+    if len(cjk_chars) < 6:
+        return False
+    common_ratio = _common_cjk_ratio(cjk_chars)
+    suspect_hits = _suspect_utf8_as_gbk_hits(cjk_chars)
+    private_use = len(re.findall(r"[\ue000-\uf8ff]", text))
+    if common_ratio <= 0.22 and suspect_hits >= max(3, len(cjk_chars) // 7):
+        return True
+    if private_use > 0 and common_ratio <= 0.35:
+        return True
+    return False
+
+
+def _text_quality_score(text: str) -> float:
+    if not text:
+        return -1e9
+    cjk_list = _extract_cjk_chars(text)
+    cjk_chars = len(cjk_list)
+    common_ratio = _common_cjk_ratio(cjk_list)
+    suspect_hits = _suspect_utf8_as_gbk_hits(cjk_list)
+    alpha_num = len(re.findall(r"[A-Za-z0-9]", text))
+    mojibake_pairs = _count_mojibake_pairs(text)
+    replacement_chars = text.count("\ufffd")
+    controls = len(re.findall(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", text))
+    private_use = len(re.findall(r"[\ue000-\uf8ff]", text))
+    score = (
+        cjk_chars * 1.5
+        + alpha_num * 0.05
+        - mojibake_pairs * 6.0
+        - replacement_chars * 8.0
+        - controls * 3.0
+        - private_use * 12.0
+        - suspect_hits * 0.8
+    )
+    if cjk_chars >= 6:
+        score += common_ratio * 40.0 - (1.0 - common_ratio) * 30.0
+    return score
+
+
+def _fix_common_mojibake(text: str) -> str:
+    if not text:
+        return ""
+    candidates = [text]
+    for src_enc, dst_enc in (
+        ("latin-1", "utf-8"),
+        ("cp1252", "utf-8"),
+    ):
+        for decode_errors in ("strict", "ignore"):
+            try:
+                candidate = text.encode(src_enc, errors="strict").decode(
+                    dst_enc,
+                    errors=decode_errors,
+                )
+            except Exception:
+                continue
+            candidates.append(candidate)
+    if _looks_like_utf8_as_gbk_mojibake(text):
+        try:
+            candidates.append(
+                text.encode("gb18030", errors="ignore").decode("utf-8", errors="ignore")
+            )
+        except Exception:
+            pass
+
+    best = text
+    best_score = _text_quality_score(text)
+    best_bad = _count_mojibake_pairs(text) + text.count("\ufffd")
+    for candidate in candidates[1:]:
+        score = _text_quality_score(candidate)
+        bad = _count_mojibake_pairs(candidate) + candidate.count("\ufffd")
+        if score > best_score:
+            best = candidate
+            best_score = score
+            best_bad = bad
+
+    orig_bad = _count_mojibake_pairs(text) + text.count("\ufffd")
+    if best is not text and (best_bad + 2 <= orig_bad or best_score >= _text_quality_score(text) + 12.0):
+        return best
+    return text
+
+
+def _clean_residual_garbled_text(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = text
+    if _count_mojibake_pairs(cleaned) >= 6:
+        cleaned = _MOJIBAKE_BLOCK_RE.sub(" ", cleaned)
+    cleaned = cleaned.replace("\ufffd", " ")
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", cleaned)
+    return cleaned
+
+
+def _extract_charset_from_content_type(content_type: str) -> Optional[str]:
+    if not content_type:
+        return None
+    match = re.search(r"charset\s*=\s*([a-zA-Z0-9._:-]+)", content_type, flags=re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).strip().strip("\"'").lower() or None
+
+
+def _extract_charset_from_html_bytes(raw: bytes) -> Optional[str]:
+    if not raw:
+        return None
+    head = raw[:4096]
+    for pattern in (_META_CHARSET_RE, _META_HTTP_EQUIV_CHARSET_RE):
+        match = pattern.search(head)
+        if match:
+            try:
+                return match.group(1).decode("ascii", errors="ignore").strip().lower() or None
+            except Exception:
+                continue
+    return None
+
+
+def _normalize_charset_name(encoding: Optional[str]) -> Optional[str]:
+    if not encoding:
+        return None
+    enc = encoding.strip().strip("\"'").lower().replace("_", "-")
+    alias = {
+        "utf8": "utf-8",
+        "unicode-1-1-utf-8": "utf-8",
+        "iso8859-1": "latin-1",
+        "iso-8859-1": "latin-1",
+        "latin1": "latin-1",
+        "us-ascii": "ascii",
+        "windows-1252": "cp1252",
+        "gbk": "gb18030",
+        "gb2312": "gb18030",
+        "gb-2312": "gb18030",
+        "gb-2312-80": "gb18030",
+        "x-gbk": "gb18030",
+        "cp936": "gb18030",
+        "big-5": "big5",
+        "big5-hkscs": "big5",
+    }
+    return alias.get(enc, enc)
+
+
+def _is_default_weak_charset(encoding: Optional[str]) -> bool:
+    enc = _normalize_charset_name(encoding)
+    return enc in {"latin-1", "ascii", "cp1252"}
+
+
+def _is_cjk_charset(encoding: Optional[str]) -> bool:
+    enc = _normalize_charset_name(encoding)
+    if not enc:
+        return False
+    return enc.startswith(("gb", "big5"))
+
+
+def _decode_html_content(
+    raw: bytes,
+    *,
+    content_type: str,
+    response_encoding: Optional[str],
+    apparent_encoding: Optional[str],
+) -> Tuple[str, str]:
+    if not raw:
+        return "", ""
+
+    content_type_enc = _normalize_charset_name(_extract_charset_from_content_type(content_type))
+    meta_enc = _normalize_charset_name(_extract_charset_from_html_bytes(raw))
+    response_enc = _normalize_charset_name(response_encoding)
+    apparent_enc = _normalize_charset_name(apparent_encoding)
+    candidates: List[str] = []
+
+    def _append_encoding(value: Optional[str]) -> None:
+        if not value:
+            return
+        enc = _normalize_charset_name(value)
+        if not enc or enc in candidates:
+            return
+        candidates.append(enc)
+
+    _append_encoding("utf-8")
+    _append_encoding(content_type_enc)
+    _append_encoding(meta_enc)
+    if response_enc and not _is_default_weak_charset(response_enc):
+        _append_encoding(response_enc)
+    _append_encoding("latin-1")
+
+    utf8_probe = raw.decode("utf-8", errors="replace")
+    utf8_badness = utf8_probe.count("\ufffd") + _count_mojibake_pairs(utf8_probe)
+    cjk_hint = any(
+        _is_cjk_charset(enc)
+        for enc in (content_type_enc, meta_enc, response_enc, apparent_enc)
+        if enc
+    )
+    if apparent_enc and (cjk_hint or utf8_badness >= 8 or not (content_type_enc or meta_enc)):
+        _append_encoding(apparent_enc)
+    if cjk_hint or utf8_badness >= 8:
+        _append_encoding("gb18030")
+        _append_encoding("big5")
+
+    best_text = ""
+    best_enc = ""
+    best_score = -1e18
+    for enc in candidates:
+        try:
+            decoded = raw.decode(enc, errors="replace")
+        except Exception:
+            continue
+        fixed = _fix_common_mojibake(decoded)
+        score = _text_quality_score(fixed)
+        if score > best_score:
+            best_score = score
+            best_text = _clean_residual_garbled_text(fixed)
+            best_enc = enc
+
+    if not best_text:
+        best_text = raw.decode("utf-8", errors="replace")
+        best_enc = "utf-8"
+    return best_text, best_enc
+
+
 def _normalize_markdown(markdown: str, char_limit: int) -> str:
     if not isinstance(markdown, str):
         return ""
-    text = markdown.replace("\r\n", "\n").replace("\r", "\n")
+    text = _clean_residual_garbled_text(_fix_common_mojibake(markdown))
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = re.sub(r"[ \t]+\n", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
@@ -1131,8 +1395,15 @@ def _fetch_static_html(url: str, timeout_s: int) -> Tuple[str, Dict[str, Any]]:
     if "application/pdf" in content_type:
         meta["error"] = "content_type_pdf"
         return "", meta
-    text = response.text or ""
+    text, selected_encoding = _decode_html_content(
+        response.content or b"",
+        content_type=content_type,
+        response_encoding=response.encoding,
+        apparent_encoding=getattr(response, "apparent_encoding", None),
+    )
     meta["ok"] = True
+    meta["encoding"] = selected_encoding or response.encoding
+    meta["mojibake_pairs"] = _count_mojibake_pairs(text)
     meta["html_chars"] = len(text)
     return text, meta
 
