@@ -1284,6 +1284,7 @@ def _collect_candidate_pages(
     from pcra.get_pdf.duckduckgo import search_duckduckgo
 
     max_results = int(fellow_settings["max_results"])
+    allow_wikipedia = bool(fellow_settings.get("allow_wikipedia"))
     query = _build_search_query(name, affiliation, paper_institutions)
     if debug is not None:
         debug["query"] = query
@@ -1311,7 +1312,7 @@ def _collect_candidate_pages(
             name_tokens=name_tokens,
             title=title,
             url=raw_url,
-            allow_wikipedia=bool(fellow_settings["allow_wikipedia"]),
+            allow_wikipedia=allow_wikipedia,
         )
         if score is None:
             dropped.append({"title": title, "url": normalized, "reason": reason})
@@ -1326,7 +1327,7 @@ def _collect_candidate_pages(
             }
         )
 
-    if fellow_settings.get("allow_wikipedia"):
+    if allow_wikipedia:
         wiki_url = f"https://en.wikipedia.org/wiki/{name.strip().replace(' ', '_')}"
         score, _, normalized = _evaluate_candidate(
             name_tokens=name_tokens,
@@ -1355,14 +1356,22 @@ def _collect_candidate_pages(
             continue
         seen.add(url)
         deduped.append(item)
-        if len(deduped) >= max_results:
-            break
+
+    selected: List[Dict[str, Any]] = list(deduped[:max_results])
+    wiki_forced = False
+    if allow_wikipedia:
+        wiki_candidate = next((item for item in deduped if bool(item.get("is_wikipedia"))), None)
+        wiki_url = str((wiki_candidate or {}).get("url") or "")
+        if wiki_url and all(str(item.get("url") or "") != wiki_url for item in selected):
+            selected.append(wiki_candidate)
+            wiki_forced = True
 
     if debug is not None:
         debug["dropped_candidates"] = dropped
         debug["candidates_sorted"] = candidates
-        debug["candidates_selected"] = deduped
-    return deduped
+        debug["candidates_selected"] = selected
+        debug["wikipedia_forced"] = wiki_forced
+    return selected
 
 
 def _fetch_static_html(url: str, timeout_s: int) -> Tuple[str, Dict[str, Any]]:
@@ -1943,12 +1952,13 @@ def _lookup_via_local_web_and_llm(
             debug["candidates_processed"] = []
         return _default_statuses(), [], "", None
 
-    max_candidates = int(fellow_settings["max_results"])
+    max_candidates = len(candidates)
     name_tokens = _tokenize_name(name)
-    queue: List[Dict[str, Any]] = list(candidates[:max_candidates])
+    queue: List[Dict[str, Any]] = list(candidates)
     seen_candidate_urls = {str(item.get("url") or "") for item in queue}
     if debug is not None:
         local_debug["candidate_queue_initial"] = queue
+        local_debug["candidate_process_budget"] = max_candidates
 
     merged_org_statuses = {org: "Unknown" for org in HONOR_ORGS}
     source_by_org: Dict[str, str] = {}
@@ -2105,7 +2115,14 @@ def _lookup_via_local_web_and_llm(
                     seen_candidate_urls.add(derived_url)
                     dropped_item = None
                     if len(queue) > max_candidates:
-                        dropped_item = queue.pop()
+                        drop_index = len(queue) - 1
+                        if bool(fellow_settings.get("allow_wikipedia")):
+                            for rev_idx in range(len(queue) - 1, idx - 1, -1):
+                                queued_url = str(queue[rev_idx].get("url") or "")
+                                if not _is_wikipedia_url(queued_url):
+                                    drop_index = rev_idx
+                                    break
+                        dropped_item = queue.pop(drop_index)
                         if str(dropped_item.get("url") or "") == derived_url:
                             seen_candidate_urls.discard(derived_url)
                     if dropped_item and str(dropped_item.get("url") or "") != derived_url:

@@ -93,9 +93,9 @@ def run() -> int:
         return 1
 
     statuses, sources, error = lookup_fellow_status(
-        name="lizhen cui" , # "Guoliang Li", "Cyrus Shahabi" 
-        affiliation="shandong university" , # "Tsinghua University", "University of Southern California"
-        institutions=[{"display_name": "shandong university"}],
+        name="Christos Faloutsos" , # "Guoliang Li", "Cyrus Shahabi" 
+        affiliation="Carnegie Mellon University" , # "Tsinghua University", "University of Southern California"
+        institutions=[{"display_name": "Carnegie Mellon University"}],
         llm_config_path=CONFIG_PATH,
         max_results=5,
         timeout_s=60,
